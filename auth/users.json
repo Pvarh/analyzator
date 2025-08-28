@@ -1,0 +1,34 @@
+{
+  "pvarhalik@sykora.eu": {
+    "password_hash": "35604f01069435bffe8540191a1de0df7df82470250401a33b528c1c89ae94c4",
+    "role": "admin",
+    "cities": [
+      "all"
+    ],
+    "name": "Peter Varhalik",
+    "active": true,
+    "features": {
+      "employee_detail_top_products": true,
+      "employee_detail_product_table": true,
+      "all_features": true
+    }
+  },
+  "jolsar@sykora.eu": {
+    "password_hash": "706c365cd1bbf18532229e10b246c5b7aa159342e3741c72d362de66b928d729",
+    "role": "manager",
+    "cities": [
+      "praha"
+    ],
+    "name": "Jirka Olsar",
+    "active": true
+  },
+  "arut@sykora.eu": {
+    "password_hash": "3e97e1b33ce1029fa0cd0e5501c0c1c0dc1bd76613b44a219209a6bab8966f83",
+    "role": "manager",
+    "cities": [
+      "praha"
+    ],
+    "name": "Adam Rut",
+    "active": true
+  }
+}
