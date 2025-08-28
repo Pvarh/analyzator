@@ -50,6 +50,7 @@ auth/sessions.json
 data/raw/*
 data/studio/*
 *.log
+logs/activity.json
 
 # Streamlit
 .streamlit/

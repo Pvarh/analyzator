@@ -16,6 +16,9 @@ from ui.styling import apply_dark_theme
 from auth.auth import init_auth, is_authenticated, show_login_page, show_user_info, is_admin, log_page_activity
 from auth.admin import show_admin_page
 
+# Import server monitoring
+from core.server_monitor import get_server_monitor
+
 import sys
 import inspect
 from datetime import datetime
@@ -558,6 +561,11 @@ def main():
     
     # Inicializácia autentifikačného systému
     init_auth()
+    
+    # Inicializácia server monitoring
+    monitor = get_server_monitor()
+    if not monitor.monitoring:
+        monitor.start_monitoring(interval_seconds=120)  # Každé 2 minúty
     
     # Ak používateľ nie je prihlásený, zobraz login stránku
     if not is_authenticated():

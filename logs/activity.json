@@ -178,5 +178,68 @@
     "page": "overview",
     "date": "2025-08-28",
     "time": "09:39:34"
+  },
+  {
+    "timestamp": "2025-08-28T11:29:05.764637",
+    "user_email": "pvarhalik@sykora.eu",
+    "user_name": "Peter Varhalik",
+    "user_role": "admin",
+    "page": "overview",
+    "date": "2025-08-28",
+    "time": "11:29:05"
+  },
+  {
+    "timestamp": "2025-08-28T11:29:19.316496",
+    "user_email": "pvarhalik@sykora.eu",
+    "user_name": "Peter Varhalik",
+    "user_role": "admin",
+    "page": "overview",
+    "date": "2025-08-28",
+    "time": "11:29:19"
+  },
+  {
+    "timestamp": "2025-08-28T11:36:42.495639",
+    "user_email": "jolsar@sykora.eu",
+    "user_name": "Jirka Olsar",
+    "user_role": "manager",
+    "page": "overview",
+    "date": "2025-08-28",
+    "time": "11:36:42"
+  },
+  {
+    "timestamp": "2025-08-28T11:40:47.449745",
+    "user_email": "jolsar@sykora.eu",
+    "user_name": "Jirka Olsar",
+    "user_role": "manager",
+    "page": "studio",
+    "date": "2025-08-28",
+    "time": "11:40:47"
+  },
+  {
+    "timestamp": "2025-08-28T11:41:23.160110",
+    "user_email": "jolsar@sykora.eu",
+    "user_name": "Jirka Olsar",
+    "user_role": "manager",
+    "page": "studio",
+    "date": "2025-08-28",
+    "time": "11:41:23"
+  },
+  {
+    "timestamp": "2025-08-28T11:41:32.088430",
+    "user_email": "jolsar@sykora.eu",
+    "user_name": "Jirka Olsar",
+    "user_role": "manager",
+    "page": "employee_detail",
+    "date": "2025-08-28",
+    "time": "11:41:32"
+  },
+  {
+    "timestamp": "2025-08-28T11:41:49.108967",
+    "user_email": "jolsar@sykora.eu",
+    "user_name": "Jirka Olsar",
+    "user_role": "manager",
+    "page": "overview",
+    "date": "2025-08-28",
+    "time": "11:41:49"
   }
 ]
