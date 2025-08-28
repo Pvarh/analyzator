@@ -1,0 +1,322 @@
+{
+  "metrics": [
+    {
+      "timestamp": "2025-08-28T11:59:36.689769",
+      "cpu": {
+        "usage_percent": 64.3,
+        "count": 4,
+        "frequency_mhz": 3201.0
+      },
+      "memory": {
+        "total_gb": 23.9,
+        "used_gb": 14.99,
+        "available_gb": 8.91,
+        "usage_percent": 62.7
+      },
+      "disk": {
+        "total_gb": 373.36,
+        "used_gb": 132.55,
+        "free_gb": 240.81,
+        "usage_percent": 35.5
+      },
+      "network": {
+        "bytes_sent": 189251958,
+        "bytes_recv": 697100016,
+        "packets_sent": 393478,
+        "packets_recv": 910678
+      },
+      "top_processes": []
+    },
+    {
+      "timestamp": "2025-08-28T12:01:38.154614",
+      "cpu": {
+        "usage_percent": 1.2,
+        "count": 4,
+        "frequency_mhz": 3201.0
+      },
+      "memory": {
+        "total_gb": 23.9,
+        "used_gb": 14.69,
+        "available_gb": 9.21,
+        "usage_percent": 61.5
+      },
+      "disk": {
+        "total_gb": 373.36,
+        "used_gb": 132.55,
+        "free_gb": 240.81,
+        "usage_percent": 35.5
+      },
+      "network": {
+        "bytes_sent": 189898001,
+        "bytes_recv": 697535766,
+        "packets_sent": 394319,
+        "packets_recv": 912495
+      },
+      "top_processes": [
+        {
+          "memory_percent": 3.192343483389439e-05,
+          "pid": 0,
+          "name": "System Idle Process",
+          "cpu_percent": 366.6
+        },
+        {
+          "memory_percent": 3.5690080909945583,
+          "pid": 17432,
+          "name": "Code.exe",
+          "cpu_percent": 6.5
+        },
+        {
+          "memory_percent": 1.1632261184774437,
+          "pid": 21260,
+          "name": "chrome.exe",
+          "cpu_percent": 3.4
+        },
+        {
+          "memory_percent": 3.1902524984078187,
+          "pid": 14272,
+          "name": "Code.exe",
+          "cpu_percent": 2.8
+        },
+        {
+          "memory_percent": 1.265907846620665,
+          "pid": 17668,
+          "name": "chrome.exe",
+          "cpu_percent": 2.8
+        },
+        {
+          "memory_percent": 0.6199052193219782,
+          "pid": 9580,
+          "name": "python.exe",
+          "cpu_percent": 1.9
+        },
+        {
+          "memory_percent": 1.70052945016672,
+          "pid": 1848,
+          "name": "dwm.exe",
+          "cpu_percent": 1.6
+        },
+        {
+          "memory_percent": 0.04169200589306607,
+          "pid": 4,
+          "name": "System",
+          "cpu_percent": 1.5
+        },
+        {
+          "memory_percent": 1.2689246112124681,
+          "pid": 18412,
+          "name": "Code.exe",
+          "cpu_percent": 1.5
+        },
+        {
+          "memory_percent": 0.2914928834682896,
+          "pid": 12932,
+          "name": "chrome.exe",
+          "cpu_percent": 1.2
+        }
+      ]
+    },
+    {
+      "timestamp": "2025-08-28T12:03:39.596238",
+      "cpu": {
+        "usage_percent": 3.9,
+        "count": 4,
+        "frequency_mhz": 3201.0
+      },
+      "memory": {
+        "total_gb": 23.9,
+        "used_gb": 14.86,
+        "available_gb": 9.04,
+        "usage_percent": 62.2
+      },
+      "disk": {
+        "total_gb": 373.36,
+        "used_gb": 132.57,
+        "free_gb": 240.79,
+        "usage_percent": 35.5
+      },
+      "network": {
+        "bytes_sent": 191387606,
+        "bytes_recv": 698783904,
+        "packets_sent": 395508,
+        "packets_recv": 916772
+      },
+      "top_processes": [
+        {
+          "memory_percent": 3.192343483389439e-05,
+          "pid": 0,
+          "name": "System Idle Process",
+          "cpu_percent": 371.5
+        },
+        {
+          "memory_percent": 3.6627831808191234,
+          "pid": 17432,
+          "name": "Code.exe",
+          "cpu_percent": 9.8
+        },
+        {
+          "memory_percent": 3.0501245812044395,
+          "pid": 15792,
+          "name": "Code.exe",
+          "cpu_percent": 5.6
+        },
+        {
+          "memory_percent": 1.700816761080225,
+          "pid": 1848,
+          "name": "dwm.exe",
+          "cpu_percent": 2.0
+        },
+        {
+          "memory_percent": 3.4035648899679005,
+          "pid": 14272,
+          "name": "Code.exe",
+          "cpu_percent": 1.6
+        },
+        {
+          "memory_percent": 0.04170796761048302,
+          "pid": 4,
+          "name": "System",
+          "cpu_percent": 1.1
+        },
+        {
+          "memory_percent": 2.7133961905765216,
+          "pid": 4632,
+          "name": "EPSecurityService.exe",
+          "cpu_percent": 1.0
+        },
+        {
+          "memory_percent": 0.3504873910413265,
+          "pid": 19276,
+          "name": "esrv_svc.exe",
+          "cpu_percent": 0.9
+        },
+        {
+          "memory_percent": 0.1333601490185938,
+          "pid": 3640,
+          "name": "WmiPrvSE.exe",
+          "cpu_percent": 0.6
+        },
+        {
+          "memory_percent": 1.2928671873378887,
+          "pid": 18412,
+          "name": "Code.exe",
+          "cpu_percent": 0.6
+        }
+      ]
+    },
+    {
+      "timestamp": "2025-08-28T12:04:09.273841",
+      "cpu": {
+        "usage_percent": 40.3,
+        "count": 4,
+        "frequency_mhz": 3201.0
+      },
+      "memory": {
+        "total_gb": 23.9,
+        "used_gb": 15.07,
+        "available_gb": 8.83,
+        "usage_percent": 63.1
+      },
+      "disk": {
+        "total_gb": 373.36,
+        "used_gb": 132.57,
+        "free_gb": 240.79,
+        "usage_percent": 35.5
+      },
+      "network": {
+        "bytes_sent": 191458709,
+        "bytes_recv": 699002862,
+        "packets_sent": 395803,
+        "packets_recv": 917342
+      },
+      "top_processes": []
+    },
+    {
+      "timestamp": "2025-08-28T12:06:10.692654",
+      "cpu": {
+        "usage_percent": 1.6,
+        "count": 4,
+        "frequency_mhz": 3201.0
+      },
+      "memory": {
+        "total_gb": 23.9,
+        "used_gb": 15.04,
+        "available_gb": 8.85,
+        "usage_percent": 62.9
+      },
+      "disk": {
+        "total_gb": 373.36,
+        "used_gb": 132.57,
+        "free_gb": 240.79,
+        "usage_percent": 35.5
+      },
+      "network": {
+        "bytes_sent": 192187549,
+        "bytes_recv": 699654303,
+        "packets_sent": 396733,
+        "packets_recv": 919517
+      },
+      "top_processes": [
+        {
+          "memory_percent": 3.192343483389439e-05,
+          "pid": 0,
+          "cpu_percent": 371.7,
+          "name": "System Idle Process"
+        },
+        {
+          "memory_percent": 0.6148932400530567,
+          "pid": 10312,
+          "cpu_percent": 14.1,
+          "name": "python.exe"
+        },
+        {
+          "memory_percent": 1.8352144217309205,
+          "pid": 2244,
+          "cpu_percent": 5.6,
+          "name": "chrome.exe"
+        },
+        {
+          "memory_percent": 1.701135995428564,
+          "pid": 1848,
+          "cpu_percent": 1.6,
+          "name": "dwm.exe"
+        },
+        {
+          "memory_percent": 1.630138276357983,
+          "pid": 17668,
+          "cpu_percent": 1.6,
+          "name": "chrome.exe"
+        },
+        {
+          "memory_percent": 1.8077443060563545,
+          "pid": 8800,
+          "cpu_percent": 1.2,
+          "name": "chrome.exe"
+        },
+        {
+          "memory_percent": 0.04170796761048302,
+          "pid": 4,
+          "cpu_percent": 0.8,
+          "name": "System"
+        },
+        {
+          "memory_percent": 0.2914928834682896,
+          "pid": 12932,
+          "cpu_percent": 0.8,
+          "name": "chrome.exe"
+        },
+        {
+          "memory_percent": 0.1808781817688456,
+          "pid": 4984,
+          "cpu_percent": 0.4,
+          "name": "ServiceLayer.exe"
+        },
+        {
+          "memory_percent": 0.040016025564286614,
+          "pid": 7932,
+          "cpu_percent": 0.4,
+          "name": "svchost.exe"
+        }
+      ]
+    }
+  ]
+}

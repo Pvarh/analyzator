@@ -959,10 +959,28 @@ def show_server_monitoring():
     
     monitor = get_server_monitor()
     
+    # Real-time toggle
+    col_toggle, col_interval = st.columns([1, 1])
+    
+    with col_toggle:
+        realtime_enabled = st.toggle("🔴 LIVE Monitoring", value=False, help="Zapne real-time monitoring s aktualizáciou každú sekundu")
+    
+    with col_interval:
+        if realtime_enabled:
+            refresh_interval = st.selectbox("🕐 Refresh interval:", 
+                ["1 sekunda", "2 sekundy", "5 sekúnd"], 
+                index=0,
+                help="Ako často sa majú aktualizovať dáta"
+            )
+            interval_map = {"1 sekunda": 1, "2 sekundy": 2, "5 sekúnd": 5}
+            interval_seconds = interval_map[refresh_interval]
+        else:
+            interval_seconds = 30
+    
     # Spustenie monitoring-u ak beží
     if not monitor.monitoring:
         if st.button("▶️ Spustiť monitoring"):
-            monitor.start_monitoring(interval_seconds=60)  # Každú minútu
+            monitor.start_monitoring(interval_seconds=60)  # Background monitoring každú minútu
             st.success("✅ Monitoring spustený!")
             st.rerun()
     else:
@@ -972,15 +990,46 @@ def show_server_monitoring():
             st.warning("⏸️ Monitoring zastavený!")
             st.rerun()
     
+    # Real-time metriky container
+    metrics_container = st.container()
+    
+    # Real-time loop pre aktualizácie
+    if realtime_enabled:
+        # Placeholder pre live updating
+        placeholder = st.empty()
+        
+        # Counter pre animáciu
+        if 'monitor_counter' not in st.session_state:
+            st.session_state.monitor_counter = 0
+        
+        with placeholder.container():
+            st.markdown(f"🔴 **LIVE** - Posledná aktualizácia: {datetime.now().strftime('%H:%M:%S')} (#{st.session_state.monitor_counter})")
+            
+            # Real-time metrics
+            show_realtime_metrics(monitor)
+        
+        # Auto-refresh s daným intervalom
+        import time
+        time.sleep(interval_seconds)
+        st.session_state.monitor_counter += 1
+        st.rerun()
+        
+    else:
+        # Manuálne refresh tlačidlo
+        if st.button("🔄 Obnoviť metriky"):
+            st.rerun()
+        
+        show_realtime_metrics(monitor)
+
+
+def show_realtime_metrics(monitor):
+    """Zobrazí real-time metriky s aktuálnymi hodnotami"""
+    
     # Real-time metrics
     col1, col2 = st.columns([2, 1])
     
     with col1:
         st.subheader("📊 Aktuálne metriky")
-        
-        # Auto-refresh každých 5 sekúnd
-        if st.button("🔄 Obnoviť metriky"):
-            pass
         
         metrics = monitor.get_current_metrics()
         
@@ -988,138 +1037,170 @@ def show_server_monitoring():
             st.error(f"❌ {metrics['error']}")
             return
         
-        # Metriky cards
+        # Animated progress bars s color coding
         metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
         
         with metric_col1:
+            cpu_percent = metrics['cpu']['usage_percent']
+            cpu_color = "🟢" if cpu_percent < 50 else "🟡" if cpu_percent < 80 else "🔴"
             st.metric(
-                label="🔥 CPU Usage", 
-                value=f"{metrics['cpu']['usage_percent']}%",
-                help=f"CPU Cores: {metrics['cpu']['count']}"
+                label=f"{cpu_color} CPU Usage", 
+                value=f"{cpu_percent}%",
+                delta=f"Cores: {metrics['cpu']['count']}",
+                help=f"CPU Frequency: {metrics['cpu']['frequency_mhz']}MHz" if metrics['cpu']['frequency_mhz'] else "CPU využitie"
             )
         
         with metric_col2:
             memory_used = metrics['memory']['used_gb']
             memory_total = metrics['memory']['total_gb']
+            memory_percent = metrics['memory']['usage_percent']
+            memory_color = "🟢" if memory_percent < 60 else "🟡" if memory_percent < 80 else "🔴"
             st.metric(
-                label="💾 RAM Usage", 
-                value=f"{memory_used:.1f}GB / {memory_total:.1f}GB",
-                delta=f"{metrics['memory']['usage_percent']}%"
+                label=f"{memory_color} RAM Usage", 
+                value=f"{memory_used:.1f}GB",
+                delta=f"{memory_percent}% z {memory_total:.1f}GB",
+                help=f"Available: {metrics['memory']['available_gb']:.1f}GB"
             )
         
         with metric_col3:
             disk_used = metrics['disk']['used_gb'] 
             disk_total = metrics['disk']['total_gb']
+            disk_percent = metrics['disk']['usage_percent']
+            disk_color = "🟢" if disk_percent < 70 else "🟡" if disk_percent < 85 else "🔴"
             st.metric(
-                label="💿 Disk Usage",
-                value=f"{disk_used:.1f}GB / {disk_total:.1f}GB", 
-                delta=f"{metrics['disk']['usage_percent']}%"
+                label=f"{disk_color} Disk Usage",
+                value=f"{disk_used:.1f}GB", 
+                delta=f"{disk_percent}% z {disk_total:.1f}GB",
+                help=f"Free: {metrics['disk']['free_gb']:.1f}GB"
             )
         
         with metric_col4:
             net_sent_mb = metrics['network']['bytes_sent'] / (1024*1024)
             net_recv_mb = metrics['network']['bytes_recv'] / (1024*1024)
             st.metric(
-                label="🌐 Network",
-                value=f"↑{net_sent_mb:.1f}MB",
-                delta=f"↓{net_recv_mb:.1f}MB"
+                label="🌐 Network Total",
+                value=f"↑{net_sent_mb:.0f}MB",
+                delta=f"↓{net_recv_mb:.0f}MB",
+                help=f"Packets: ↑{metrics['network']['packets_sent']} ↓{metrics['network']['packets_recv']}"
             )
         
-        # Progress bars
-        st.subheader("📈 Využitie resources")
+        # Animated progress bars s gradient colors
+        st.subheader("📈 Využitie resources (Live)")
         
-        cpu_color = "normal" if metrics['cpu']['usage_percent'] < 80 else "error"
-        st.progress(metrics['cpu']['usage_percent'] / 100, text=f"CPU: {metrics['cpu']['usage_percent']}%")
+        # CPU progress s color gradient
+        cpu_color_class = "normal" if cpu_percent < 80 else "error"
+        st.progress(cpu_percent / 100, text=f"🔥 CPU: {cpu_percent}% ({'Normal' if cpu_percent < 80 else 'High!'})")
         
-        memory_color = "normal" if metrics['memory']['usage_percent'] < 80 else "error" 
-        st.progress(metrics['memory']['usage_percent'] / 100, text=f"RAM: {metrics['memory']['usage_percent']}%")
+        # Memory progress
+        memory_status = "Normal" if memory_percent < 80 else "High!"
+        st.progress(memory_percent / 100, text=f"💾 RAM: {memory_percent}% ({memory_status}) - {memory_used:.1f}GB/{memory_total:.1f}GB")
         
-        disk_color = "normal" if metrics['disk']['usage_percent'] < 80 else "error"
-        st.progress(metrics['disk']['usage_percent'] / 100, text=f"Disk: {metrics['disk']['usage_percent']}%")
+        # Disk progress
+        disk_status = "Normal" if disk_percent < 80 else "High!"
+        st.progress(disk_percent / 100, text=f"💿 Disk: {disk_percent}% ({disk_status}) - {disk_used:.1f}GB/{disk_total:.1f}GB")
         
-        # Top procesy
-        st.subheader("🏃 Top procesy (CPU usage)")
+        # Real-time process monitoring
+        st.subheader("🏃 Top procesy (Live CPU usage)")
         if metrics['top_processes']:
             process_data = []
-            for proc in metrics['top_processes'][:8]:
+            for i, proc in enumerate(metrics['top_processes'][:8], 1):
+                # Color coding pre procesy
+                cpu_emoji = "🔥" if proc['cpu_percent'] > 20 else "⚡" if proc['cpu_percent'] > 10 else "💤"
                 process_data.append({
+                    '#': i,
+                    '🏃': cpu_emoji,
                     'PID': proc['pid'],
-                    'Názov': proc['name'],
+                    'Process': proc['name'][:20],  # Skrátenie dlhých názvov
                     'CPU %': f"{proc['cpu_percent']:.1f}%",
                     'RAM %': f"{proc['memory_percent']:.1f}%"
                 })
             
             if process_data:
                 df_processes = pd.DataFrame(process_data)
-                st.dataframe(df_processes, width=600)
+                st.dataframe(df_processes, width="stretch", hide_index=True)
         
     with col2:
-        st.subheader("📉 Historické trendy")
+        st.subheader("📉 Live grafy")
         
-        # Výber časového rozsahu
-        time_range = st.selectbox("⏱️ Časový rozsah:", [
-            "Posledná hodina",
-            "Posledných 6 hodín", 
-            "Posledných 12 hodín",
-            "Posledných 24 hodín"
-        ], index=1)
-        
-        hours_map = {
-            "Posledná hodina": 1,
-            "Posledných 6 hodín": 6,
-            "Posledných 12 hodín": 12, 
-            "Posledných 24 hodín": 24
-        }
-        
-        historical_metrics = monitor.get_historical_metrics(hours_map[time_range])
+        # Mini real-time charts
+        historical_metrics = monitor.get_historical_metrics(1)  # Posledná hodina
         
         if len(historical_metrics) > 1:
-            # Príprava dát pre grafy
-            timestamps = [datetime.fromisoformat(m['timestamp']) for m in historical_metrics]
-            cpu_data = [m['cpu']['usage_percent'] for m in historical_metrics]
-            memory_data = [m['memory']['usage_percent'] for m in historical_metrics]
+            # Príprava dát
+            timestamps = [datetime.fromisoformat(m['timestamp']) for m in historical_metrics[-20:]]  # Posledných 20 bodov
+            cpu_data = [m['cpu']['usage_percent'] for m in historical_metrics[-20:]]
+            memory_data = [m['memory']['usage_percent'] for m in historical_metrics[-20:]]
             
-            # CPU graf
+            # Compact CPU graf
             fig_cpu = go.Figure()
             fig_cpu.add_trace(go.Scatter(
                 x=timestamps, 
                 y=cpu_data,
                 mode='lines+markers',
                 name='CPU %',
-                line=dict(color='red', width=2)
+                line=dict(color='#ff6b6b', width=3),
+                marker=dict(size=4)
             ))
             fig_cpu.update_layout(
-                title='CPU Usage Over Time',
-                xaxis_title='Čas',
+                title='CPU Usage (Live)',
+                xaxis_title='',
                 yaxis_title='CPU %',
-                height=200,
-                showlegend=False
+                height=180,
+                showlegend=False,
+                margin=dict(l=20, r=20, t=40, b=20),
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0.05)'
             )
-            st.plotly_chart(fig_cpu, use_container_width=True)
+            st.plotly_chart(fig_cpu, width="stretch", key=f"cpu_live_{st.session_state.get('monitor_counter', 0)}")
             
-            # Memory graf  
+            # Compact Memory graf  
             fig_memory = go.Figure()
             fig_memory.add_trace(go.Scatter(
                 x=timestamps,
                 y=memory_data,
                 mode='lines+markers', 
                 name='RAM %',
-                line=dict(color='blue', width=2)
+                line=dict(color='#4ecdc4', width=3),
+                marker=dict(size=4)
             ))
             fig_memory.update_layout(
-                title='Memory Usage Over Time',
-                xaxis_title='Čas',
+                title='Memory Usage (Live)',
+                xaxis_title='',
                 yaxis_title='RAM %',
-                height=200,
-                showlegend=False
+                height=180,
+                showlegend=False,
+                margin=dict(l=20, r=20, t=40, b=20),
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0.05)'
             )
-            st.plotly_chart(fig_memory, use_container_width=True)
+            st.plotly_chart(fig_memory, width="stretch", key=f"memory_live_{st.session_state.get('monitor_counter', 0)}")
+            
+            # Current values display
+            current_cpu = cpu_data[-1] if cpu_data else 0
+            current_memory = memory_data[-1] if memory_data else 0
+            
+            st.markdown(f"""
+            **🔴 Live Values:**
+            - CPU: **{current_cpu:.1f}%**
+            - RAM: **{current_memory:.1f}%**
+            - Last: `{timestamps[-1].strftime('%H:%M:%S') if timestamps else 'N/A'}`
+            """)
             
         else:
-            st.info("🔄 Čakám na viac historických dát...")
+            st.info("🔄 Načítavam live dáta...")
+            
+            # Placeholder graf pre inicializáciu
+            fig_placeholder = go.Figure()
+            fig_placeholder.add_trace(go.Scatter(x=[0], y=[0], mode='markers', name='Waiting...'))
+            fig_placeholder.update_layout(
+                title='Waiting for data...',
+                height=180,
+                showlegend=False
+            )
+            st.plotly_chart(fig_placeholder, width="stretch")
     
-    # Denné štatistiky
-    st.subheader("📈 Denné štatistiky rastu")
+    # Denné štatistiky (nerefresh-uje sa tak často)
+    st.subheader("📈 Denné štatistiky")
     
     daily_stats = monitor.get_daily_growth_stats()
     
@@ -1128,50 +1209,43 @@ def show_server_monitoring():
         
         with stat_col1:
             memory_growth = daily_stats['memory_growth_gb']
-            memory_color = "normal" if memory_growth < 0.1 else "error"
+            growth_emoji = "📈" if memory_growth > 0 else "📉" if memory_growth < 0 else "➖"
             st.metric(
-                "💾 Rast RAM za 24h",
+                f"{growth_emoji} RAM Growth/24h",
                 f"{memory_growth:+.3f} GB",
-                help="Ako rýchlo rastie využitie RAM"
+                help="Ako sa zmenil RAM usage za posledných 24 hodín"
             )
         
         with stat_col2:
             disk_growth = daily_stats['disk_growth_gb'] 
-            disk_color = "normal" if disk_growth < 1.0 else "error"
+            disk_emoji = "📈" if disk_growth > 0 else "📉" if disk_growth < 0 else "➖"
             st.metric(
-                "💿 Rast Disk za 24h",
+                f"{disk_emoji} Disk Growth/24h",
                 f"{disk_growth:+.3f} GB", 
-                help="Ako rýchlo rastie využitie disku"
+                help="Ako sa zmenil disk usage za posledných 24 hodín"
             )
         
         with stat_col3:
             avg_cpu = daily_stats['avg_cpu_percent']
+            cpu_status = "Normal" if avg_cpu < 50 else "Busy"
             st.metric(
-                "🔥 Priemerné CPU",
+                "🔥 Avg CPU/24h",
                 f"{avg_cpu:.1f}%",
+                delta=cpu_status,
                 help="Priemerné CPU využitie za 24h"
             )
         
         with stat_col4:
             avg_memory = daily_stats['avg_memory_percent']
+            memory_status = "Normal" if avg_memory < 60 else "High"
             st.metric(
-                "💾 Priemerná RAM",
-                f"{avg_memory:.1f}%",
+                "💾 Avg RAM/24h",
+                f"{avg_memory:.1f}%", 
+                delta=memory_status,
                 help="Priemerné RAM využitie za 24h"
             )
         
-        st.info(f"📊 Dáta na základe {daily_stats['data_points']} meraní za posledných 24 hodín")
+        st.caption(f"📊 Based on {daily_stats['data_points']} measurements over 24 hours")
     
     else:
         st.warning(f"⚠️ {daily_stats['error']}")
-    
-    # Auto-refresh pre real-time monitoring
-    if monitor.monitoring:
-        st.write("🔄 **Stránka sa automaticky obnoví každých 30 sekúnd**")
-        # Použitie session state pre auto-refresh
-        if 'last_refresh' not in st.session_state:
-            st.session_state.last_refresh = datetime.now()
-        
-        if (datetime.now() - st.session_state.last_refresh).seconds > 30:
-            st.session_state.last_refresh = datetime.now()
-            st.rerun()

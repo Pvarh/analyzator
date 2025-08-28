@@ -21,14 +21,5 @@
     ],
     "name": "Jirka Olsar",
     "active": true
-  },
-  "arut@sykora.eu": {
-    "password_hash": "3e97e1b33ce1029fa0cd0e5501c0c1c0dc1bd76613b44a219209a6bab8966f83",
-    "role": "manager",
-    "cities": [
-      "praha"
-    ],
-    "name": "Adam Rut",
-    "active": true
   }
 }

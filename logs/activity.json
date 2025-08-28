@@ -241,5 +241,194 @@
     "page": "overview",
     "date": "2025-08-28",
     "time": "11:41:49"
+  },
+  {
+    "timestamp": "2025-08-28T11:59:55.208254",
+    "user_email": "jolsar@sykora.eu",
+    "user_name": "Jirka Olsar",
+    "user_role": "manager",
+    "page": "overview",
+    "date": "2025-08-28",
+    "time": "11:59:55"
+  },
+  {
+    "timestamp": "2025-08-28T12:00:02.123371",
+    "user_email": "jolsar@sykora.eu",
+    "user_name": "Jirka Olsar",
+    "user_role": "manager",
+    "page": "overview",
+    "date": "2025-08-28",
+    "time": "12:00:02"
+  },
+  {
+    "timestamp": "2025-08-28T12:00:11.975156",
+    "user_email": "pvarhalik@sykora.eu",
+    "user_name": "Peter Varhalik",
+    "user_role": "admin",
+    "page": "overview",
+    "date": "2025-08-28",
+    "time": "12:00:11"
+  },
+  {
+    "timestamp": "2025-08-28T12:00:17.302710",
+    "user_email": "pvarhalik@sykora.eu",
+    "user_name": "Peter Varhalik",
+    "user_role": "admin",
+    "page": "admin",
+    "date": "2025-08-28",
+    "time": "12:00:17"
+  },
+  {
+    "timestamp": "2025-08-28T12:04:19.212576",
+    "user_email": "pvarhalik@sykora.eu",
+    "user_name": "Peter Varhalik",
+    "user_role": "admin",
+    "page": "overview",
+    "date": "2025-08-28",
+    "time": "12:04:19"
+  },
+  {
+    "timestamp": "2025-08-28T12:04:21.502588",
+    "user_email": "pvarhalik@sykora.eu",
+    "user_name": "Peter Varhalik",
+    "user_role": "admin",
+    "page": "admin",
+    "date": "2025-08-28",
+    "time": "12:04:21"
+  },
+  {
+    "timestamp": "2025-08-28T12:04:30.880738",
+    "user_email": "pvarhalik@sykora.eu",
+    "user_name": "Peter Varhalik",
+    "user_role": "admin",
+    "page": "admin",
+    "date": "2025-08-28",
+    "time": "12:04:30"
+  },
+  {
+    "timestamp": "2025-08-28T12:04:33.785217",
+    "user_email": "pvarhalik@sykora.eu",
+    "user_name": "Peter Varhalik",
+    "user_role": "admin",
+    "page": "admin",
+    "date": "2025-08-28",
+    "time": "12:04:33"
+  },
+  {
+    "timestamp": "2025-08-28T12:04:36.707731",
+    "user_email": "pvarhalik@sykora.eu",
+    "user_name": "Peter Varhalik",
+    "user_role": "admin",
+    "page": "admin",
+    "date": "2025-08-28",
+    "time": "12:04:36"
+  },
+  {
+    "timestamp": "2025-08-28T12:04:39.495400",
+    "user_email": "pvarhalik@sykora.eu",
+    "user_name": "Peter Varhalik",
+    "user_role": "admin",
+    "page": "admin",
+    "date": "2025-08-28",
+    "time": "12:04:39"
+  },
+  {
+    "timestamp": "2025-08-28T12:04:42.296334",
+    "user_email": "pvarhalik@sykora.eu",
+    "user_name": "Peter Varhalik",
+    "user_role": "admin",
+    "page": "admin",
+    "date": "2025-08-28",
+    "time": "12:04:42"
+  },
+  {
+    "timestamp": "2025-08-28T12:04:45.047439",
+    "user_email": "pvarhalik@sykora.eu",
+    "user_name": "Peter Varhalik",
+    "user_role": "admin",
+    "page": "admin",
+    "date": "2025-08-28",
+    "time": "12:04:45"
+  },
+  {
+    "timestamp": "2025-08-28T12:04:47.823862",
+    "user_email": "pvarhalik@sykora.eu",
+    "user_name": "Peter Varhalik",
+    "user_role": "admin",
+    "page": "admin",
+    "date": "2025-08-28",
+    "time": "12:04:47"
+  },
+  {
+    "timestamp": "2025-08-28T12:04:50.642008",
+    "user_email": "pvarhalik@sykora.eu",
+    "user_name": "Peter Varhalik",
+    "user_role": "admin",
+    "page": "admin",
+    "date": "2025-08-28",
+    "time": "12:04:50"
+  },
+  {
+    "timestamp": "2025-08-28T12:04:53.442468",
+    "user_email": "pvarhalik@sykora.eu",
+    "user_name": "Peter Varhalik",
+    "user_role": "admin",
+    "page": "admin",
+    "date": "2025-08-28",
+    "time": "12:04:53"
+  },
+  {
+    "timestamp": "2025-08-28T12:04:56.210555",
+    "user_email": "pvarhalik@sykora.eu",
+    "user_name": "Peter Varhalik",
+    "user_role": "admin",
+    "page": "admin",
+    "date": "2025-08-28",
+    "time": "12:04:56"
+  },
+  {
+    "timestamp": "2025-08-28T12:04:59.154629",
+    "user_email": "pvarhalik@sykora.eu",
+    "user_name": "Peter Varhalik",
+    "user_role": "admin",
+    "page": "admin",
+    "date": "2025-08-28",
+    "time": "12:04:59"
+  },
+  {
+    "timestamp": "2025-08-28T12:05:01.974015",
+    "user_email": "pvarhalik@sykora.eu",
+    "user_name": "Peter Varhalik",
+    "user_role": "admin",
+    "page": "admin",
+    "date": "2025-08-28",
+    "time": "12:05:01"
+  },
+  {
+    "timestamp": "2025-08-28T12:05:03.860348",
+    "user_email": "pvarhalik@sykora.eu",
+    "user_name": "Peter Varhalik",
+    "user_role": "admin",
+    "page": "admin",
+    "date": "2025-08-28",
+    "time": "12:05:03"
+  },
+  {
+    "timestamp": "2025-08-28T12:06:03.577644",
+    "user_email": "pvarhalik@sykora.eu",
+    "user_name": "Peter Varhalik",
+    "user_role": "admin",
+    "page": "admin",
+    "date": "2025-08-28",
+    "time": "12:06:03"
+  },
+  {
+    "timestamp": "2025-08-28T12:06:05.317841",
+    "user_email": "pvarhalik@sykora.eu",
+    "user_name": "Peter Varhalik",
+    "user_role": "admin",
+    "page": "admin",
+    "date": "2025-08-28",
+    "time": "12:06:05"
   }
 ]
