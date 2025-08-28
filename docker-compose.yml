@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  analyzator:
+    build: .
+    container_name: analyzator-app
+    ports:
+      - "8501:8501"
+    volumes:
+      # Trvalé uloženie dát na serveri
+      - ./server-data/raw:/app/data/raw
+      - ./server-data/studio:/app/data/studio  
+      - ./server-data/auth:/app/auth
+      - ./server-data/logs:/app/logs
+    environment:
+      - PYTHONPATH=/app
+      - STREAMLIT_SERVER_HEADLESS=true
+      - STREAMLIT_SERVER_ADDRESS=0.0.0.0
+      - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+    restart: unless-stopped
+    networks:
+      - analyzator-network
+
+networks:
+  analyzator-network:
+    driver: bridge
