@@ -13,7 +13,7 @@ from ui.pages import overview, employee, heatmap, benchmark, studio, employee_de
 from ui.styling import apply_dark_theme
 
 # Import autentifikačného systému
-from auth.auth import init_auth, is_authenticated, show_login_page, show_user_info, is_admin, log_page_activity
+from auth.auth import init_auth, is_authenticated, show_login_page, show_user_info, is_admin, log_page_activity, can_show_sidebar_statistics
 from auth.admin import show_admin_page
 
 # Import server monitoring
@@ -423,100 +423,121 @@ def initialize_session_state():
 
 
 def create_sidebar():
-    """Vytvorí postranný panel s navigáciou - KOMPLETNÁ verzia"""
+    """Vytvorí postranný panel s navigáciou - context-aware verzia"""
     
     with st.sidebar:
-        st.markdown("# 📊 Navigation")
+        # Context-aware sidebar obsah
+        current_page = st.session_state.get('current_page', 'overview')
         
-        # ✅ NASTAVENIA DÁT - NOVÉ
-        st.markdown("### ⚙️ Nastavenia dát")
-        
-        current_setting = st.session_state.get('include_terminated_employees', False)
-        
-        include_terminated = st.checkbox(
-            "🔄 Zahrnúť ukončených zamestnancov", 
-            value=current_setting,
-            help="Zahrnúť aj zamestnancov s 'X' v poslednom mesiaci"
-        )
-        
-        # Okamžitá zmena nastavenia
-        if include_terminated != current_setting:
-            st.session_state.include_terminated_employees = include_terminated
+        if current_page == 'admin':
+            # ADMIN PANEL SIDEBAR
+            st.markdown("# 👑 Admin Panel")
             
-            # Vymaž analyzer pre reload
-            if 'analyzer' in st.session_state:
-                del st.session_state.analyzer
-            
-            st.rerun()
-        
-        # Info o počte zamestnancov
-        if st.session_state.get('analyzer'):
-            emp_count = len(st.session_state.analyzer.sales_employees)
-            st.info(f"📊 Aktuálne: {emp_count} zamestnancov")
-        
-        st.divider()
-        
-        # NAVIGAČNÉ TLAČIDLÁ
-
-
-        if st.button("🏠 Prehľad", width='stretch', 
-                    type="primary" if st.session_state.current_page == 'overview' else "secondary"):
-            st.session_state.current_page = 'overview'
-            st.session_state.selected_employee = None
-            st.rerun()
-        
-        if st.button("👤 Detail zamestnanca", width='stretch',
-                    type="primary" if st.session_state.current_page == 'employee' else "secondary"):
-            if st.session_state.selected_employee:
-                st.session_state.current_page = 'employee'
-            else:
-                st.warning("Najprv vyberte zamestnanca v prehľade")
-        
-        if st.button("🏆 Benchmark", width='stretch',
-                    type="primary" if st.session_state.current_page == 'benchmark' else "secondary"):
-            st.session_state.current_page = 'benchmark'
-            st.session_state.selected_employee = None
-            st.rerun()
-        
-        if st.button("🔥 Heatmapa", width='stretch',
-                    type="primary" if st.session_state.current_page == 'heatmap' else "secondary"):
-            st.session_state.current_page = 'heatmap'
-            st.rerun()
-        if st.button("🏢 Studio", width='stretch',
-            type="primary" if st.session_state.current_page == 'studio' else "secondary"):
-            st.session_state.current_page = 'studio'
-            st.session_state.selected_employee = None
-            st.rerun()
-        
-        # ✅ NOVÉ - Admin tlačidlo (iba pre adminov)
-        if is_admin():
-            if st.button("👑 Administrácia", width='stretch',
-                        type="primary" if st.session_state.current_page == 'admin' else "secondary"):
-                st.session_state.current_page = 'admin'
-                st.rerun()
-        
-        st.divider()
-        
-        # INFO O VYBRANOM ZAMESTNANCOVI
-        if st.session_state.selected_employee:
-            st.markdown("### 👤 Vybratý zamestnanec")
-            st.info(f"**{st.session_state.selected_employee}**")
-            
-            if st.button("❌ Zrušiť výber", width='stretch'):
-                st.session_state.selected_employee = None
+            # Tlačidlo späť na Overview
+            if st.button("⬅️ Späť na Overview", width='stretch', type="primary", key="back_to_overview_admin"):
                 st.session_state.current_page = 'overview'
+                # Vyčisti všetky admin session state
+                keys_to_clear = ['show_monitoring_dashboard', 'show_structure', 'show_file_management']
+                for key in keys_to_clear:
+                    if key in st.session_state:
+                        del st.session_state[key]
                 st.rerun()
-        
-        st.divider()
-        
-        # CELKOVÉ ŠTATISTIKY
-        if 'analyzer' in st.session_state:
-            stats = st.session_state.analyzer.calculate_company_statistics()
             
-            st.markdown("### 📊 Celkové štatistiky")
-            st.metric("Zamestnanci", stats['total_employees'])
-            st.metric("Celkový predaj", format_money(stats['total_sales']))
-            st.metric("Priemer na zamestnanca", format_money(stats['average_sales_per_employee']))
+            st.divider()
+            st.markdown("### 🔧 Admin sekcia")
+            st.info("Ste v administrácii systému")
+            
+        else:
+            # NORMÁLNE STRÁNKY SIDEBAR  
+            st.markdown("# 📊 Navigation")
+            
+            # ✅ NASTAVENIA DÁT
+            st.markdown("### ⚙️ Nastavenia dát")
+            
+            current_setting = st.session_state.get('include_terminated_employees', False)
+            
+            include_terminated = st.checkbox(
+                "🔄 Zahrnúť ukončených zamestnancov", 
+                value=current_setting,
+                help="Zahrnúť aj zamestnancov s 'X' v poslednom mesiaci"
+            )
+            
+            # Okamžitá zmena nastavenia
+            if include_terminated != current_setting:
+                st.session_state.include_terminated_employees = include_terminated
+                
+                # Vymaž analyzer pre reload
+                if 'analyzer' in st.session_state:
+                    del st.session_state.analyzer
+                
+                st.rerun()
+            
+            # Info o počte zamestnancov
+            if st.session_state.get('analyzer'):
+                emp_count = len(st.session_state.analyzer.sales_employees)
+                st.info(f"📊 Aktuálne: {emp_count} zamestnancov")
+            
+            st.divider()
+            
+            # NAVIGAČNÉ TLAČIDLÁ
+            if st.button("🏠 Prehľad", width='stretch', 
+                        type="primary" if current_page == 'overview' else "secondary"):
+                st.session_state.current_page = 'overview'
+                st.session_state.selected_employee = None
+                st.rerun()
+            
+            if st.button("👤 Detail zamestnanca", width='stretch',
+                        type="primary" if current_page == 'employee' else "secondary"):
+                if st.session_state.selected_employee:
+                    st.session_state.current_page = 'employee'
+                else:
+                    st.warning("Najprv vyberte zamestnanca v prehľade")
+            
+            if st.button("🏆 Benchmark", width='stretch',
+                        type="primary" if current_page == 'benchmark' else "secondary"):
+                st.session_state.current_page = 'benchmark'
+                st.session_state.selected_employee = None
+                st.rerun()
+            
+            if st.button("🔥 Heatmapa", width='stretch',
+                        type="primary" if current_page == 'heatmap' else "secondary"):
+                st.session_state.current_page = 'heatmap'
+                st.rerun()
+                
+            if st.button("🏢 Studio", width='stretch',
+                type="primary" if current_page == 'studio' else "secondary"):
+                st.session_state.current_page = 'studio'
+                st.session_state.selected_employee = None
+                st.rerun()
+            
+            # ✅ Admin tlačidlo (iba pre adminov)
+            if is_admin():
+                if st.button("👑 Administrácia", width='stretch',
+                            type="primary" if current_page == 'admin' else "secondary"):
+                    st.session_state.current_page = 'admin'
+                    st.rerun()
+            
+            st.divider()
+            
+            # INFO O VYBRANOM ZAMESTNANCOVI
+            if st.session_state.selected_employee:
+                st.markdown("### 👤 Vybratý zamestnanec")
+                st.info(f"**{st.session_state.selected_employee}**")
+                
+                if st.button("❌ Zrušiť výber", width='stretch'):
+                    st.session_state.selected_employee = None
+                    st.rerun()
+            
+            st.divider()
+            
+            # CELKOVÉ ŠTATISTIKY - iba ak má používateľ povolené
+            if 'analyzer' in st.session_state and can_show_sidebar_statistics():
+                stats = st.session_state.analyzer.calculate_company_statistics()
+                
+                st.markdown("### 📊 Celkové štatistiky")
+                st.metric("Zamestnanci", stats['total_employees'])
+                st.metric("Celkový predaj", format_money(stats['total_sales']))
+                st.metric("Priemer na zamestnanca", format_money(stats['average_sales_per_employee']))
             
             # BENCHMARK QUICK STATS
             if st.session_state.current_page == 'benchmark':
@@ -572,6 +593,12 @@ def main():
         show_login_page()
         return
     
+    # Inicializácia session state
+    initialize_session_state()
+    
+    # Vytvorenie sidebar navigácie - PRED admin routing
+    create_sidebar()
+    
     # Ak je prihlásený admin a je na admin stránke
     if st.session_state.get('current_page') == 'admin':
         if is_admin():
@@ -608,9 +635,6 @@ def main():
     
     # Inicializácia session state
     initialize_session_state()
-    
-    # Vytvorenie sidebar navigácie
-    create_sidebar()
     
     # Získanie analyzátora
     analyzer = st.session_state.analyzer

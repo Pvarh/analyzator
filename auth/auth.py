@@ -420,6 +420,15 @@ def has_feature_access(feature: str) -> bool:
     
     return user_db.has_feature(current_user['email'], feature)
 
+def can_show_sidebar_statistics() -> bool:
+    """Kontroluje či môže používateľ vidieť celkové štatistiky v sidebar-e"""
+    # Admin vždy môže
+    if is_admin():
+        return True
+    
+    # Pre ostatných kontroluj feature flag
+    return has_feature_access('sidebar_company_statistics')
+
 
 def get_user_features(email: str = None) -> Dict[str, bool]:
     """Získa funkcie pre používateľa"""

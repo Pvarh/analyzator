@@ -51,6 +51,7 @@ data/raw/*
 data/studio/*
 *.log
 logs/activity.json
+logs/server_metrics.json
 
 # Streamlit
 .streamlit/

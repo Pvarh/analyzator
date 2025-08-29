@@ -20,6 +20,11 @@
       "praha"
     ],
     "name": "Jirka Olsar",
-    "active": true
+    "active": true,
+    "features": {
+      "employee_detail_top_products": false,
+      "employee_detail_product_table": false,
+      "sidebar_company_statistics": false
+    }
   }
 }

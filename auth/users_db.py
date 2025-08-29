@@ -193,6 +193,7 @@ class UserDatabase:
         return {
             "employee_detail_top_products": "Najpredávanejšie produkty z každej kategórie",
             "employee_detail_product_table": "Detailná tabuľka top produktov",
+            "sidebar_company_statistics": "Celkové štatistiky firmy v sidebar-e",
             # Tu môžeš pridať ďalšie funkcie
         }
     

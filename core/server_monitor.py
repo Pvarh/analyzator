@@ -113,8 +113,20 @@ class ServerMonitor:
     def get_historical_metrics(self, hours: int = 24) -> List[Dict]:
         """Získa historické metrics za posledné hodiny"""
         try:
+            # Skontroluj či súbor existuje a nie je prázdny
+            if not os.path.exists(self.data_file) or os.path.getsize(self.data_file) == 0:
+                print("Metrics súbor neexistuje alebo je prázdny, vytváranie nového...")
+                self._ensure_data_file()
+                return []
+            
             with open(self.data_file, 'r') as f:
-                data = json.load(f)
+                content = f.read().strip()
+                if not content:
+                    print("Prázdny metrics súbor, vytváranie nového...")
+                    self._ensure_data_file()
+                    return []
+                
+                data = json.loads(content)
             
             cutoff_time = datetime.now() - timedelta(hours=hours)
             
@@ -124,11 +136,17 @@ class ServerMonitor:
                     metric_time = datetime.fromisoformat(metric["timestamp"])
                     if metric_time > cutoff_time:
                         filtered_metrics.append(metric)
-                except:
+                except Exception as parse_error:
+                    print(f"Chyba pri parsovaní metric timestamp: {parse_error}")
                     continue
             
             return filtered_metrics
             
+        except json.JSONDecodeError as e:
+            print(f"Chyba pri načítavaní historických metrics - JSON decode error: {e}")
+            print("Obnovujem metrics súbor...")
+            self._ensure_data_file()
+            return []
         except Exception as e:
             print(f"Chyba pri načítavaní historických metrics: {e}")
             return []
