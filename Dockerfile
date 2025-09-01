@@ -15,8 +15,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Kopírovanie aplikácie
 COPY . .
 
-# Vytvorenie potrebných priečinkov
-RUN mkdir -p data/raw data/studio auth logs
+# Vytvorenie potrebných priečinkov (BEZ auth - už existuje!)
+RUN mkdir -p data/raw data/studio logs
 
 # Vytvorenie sessions.json z template ak neexistuje
 RUN if [ ! -f auth/sessions.json ]; then cp auth/sessions.template.json auth/sessions.json; fi
