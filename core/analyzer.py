@@ -13,8 +13,9 @@ class DataAnalyzer:
         self.internet_data = None
         self.applications_data = None
         self.name_mapping = {}
+        self.data_path = None  # ✅ PRIDANÉ
         
-    def load_data(self, sales_data, internet_data=None, applications_data=None):
+    def load_data(self, sales_data, internet_data=None, applications_data=None, data_path=None):
         """Načíta všetky dáta do analyzátora"""
         
         # Uložíme pôvodné sales dáta pre city mapping
@@ -24,7 +25,31 @@ class DataAnalyzer:
         self.sales_employees = sales_data
         self.internet_data = internet_data
         self.applications_data = applications_data
+        self.data_path = data_path  # ✅ PRIDANÉ
         
+        # DEBUG výpisy - použije streamlit ak je dostupný
+        try:
+            import streamlit as st
+            st.write("DEBUG LOAD_DATA:")
+            st.write(f"  - Sales employees: {len(self.sales_employees) if self.sales_employees else 0}")
+            st.write(f"  - Internet data: {len(self.internet_data) if self.internet_data is not None else 0} riadkov")
+            st.write(f"  - Applications data: {len(self.applications_data) if self.applications_data is not None else 0} riadkov")
+            st.write(f"  - Data path: {self.data_path}")
+            
+            if self.internet_data is not None:
+                st.write(f"  - Internet unique persons: {len(self.internet_data['Osoba ▲'].unique())}")
+                st.write(f"  - First 3 internet persons: {list(self.internet_data['Osoba ▲'].unique()[:3])}")
+        except:
+            # Fallback na print ak streamlit nie je dostupný
+            print(f"DEBUG LOAD_DATA:")
+            print(f"  - Sales employees: {len(self.sales_employees) if self.sales_employees else 0}")
+            print(f"  - Internet data: {len(self.internet_data) if self.internet_data is not None else 0} riadkov")
+            print(f"  - Applications data: {len(self.applications_data) if self.applications_data is not None else 0} riadkov")
+            print(f"  - Data path: {self.data_path}")
+            
+            if self.internet_data is not None:
+                print(f"  - Internet unique persons: {len(self.internet_data['Osoba ▲'].unique())}")
+                print(f"  - First 3 internet persons: {list(self.internet_data['Osoba ▲'].unique()[:3])}")
         
         # Vytvorenie name mappingu
         self._create_name_mapping()
@@ -228,7 +253,7 @@ class DataAnalyzer:
         return "unknown"
 
     def simplify_name(self, name):
-        """Pokročilé zjednodušenie mena pre lepšie matchovanie"""
+        """Pokročilé zjednodušenie mena pre lepšie matchovanie - OPRAVENÉ pre dátumy"""
         
         if not name or pd.isna(name):
             return ""
@@ -236,6 +261,17 @@ class DataAnalyzer:
         # Odstránenie diakritiky
         simplified = unicodedata.normalize('NFD', str(name))
         simplified = ''.join(char for char in simplified if unicodedata.category(char) != 'Mn')
+        
+        # NOVÉ: Odstránenie dátumov a dodatočných informácií pred normalizáciou
+        import re
+        # Odstráni všetko od "nást." alebo podobných slov
+        simplified = re.sub(r'[.,]\s*n[aá]st.*', '', simplified, flags=re.IGNORECASE)
+        simplified = re.sub(r'[.,]\s*nastup.*', '', simplified, flags=re.IGNORECASE) 
+        simplified = re.sub(r'[.,]\s*konec.*', '', simplified, flags=re.IGNORECASE)
+        # Odstráni dátumy ako "10.3.25" alebo "17.3.25"
+        simplified = re.sub(r'\d{1,2}\.\d{1,2}\.\d{2,4}', '', simplified)
+        # Odstráni extra medzery
+        simplified = re.sub(r'\s+', ' ', simplified).strip()
         
         # Ďalšie čistenie
         simplified = (simplified
@@ -254,7 +290,8 @@ class DataAnalyzer:
                      .replace('š', 's')
                      .replace('ž', 'z'))
         
-        # Odstránenie všetkých číslic
+        # OPRAVENÉ: Odstránenie číslic len ak nie sú súčasťou iniciálu (napr. "A" by malo zostať)
+        # Zachová písmená aj po odstránení číslic
         simplified = ''.join(char for char in simplified if not char.isdigit())
         
         return simplified
@@ -394,9 +431,10 @@ class DataAnalyzer:
 
     # ✅ NOVÁ FUNKCIA - find_matching_names
     def find_matching_names(self, employee_name, data_source):
-        """Nájde všetky možné varianty mena v danom zdroji dát"""
+        """Nájde všetky možné varianty mena v danom zdroji dát - OPRAVENÉ pre presnejšie matchovanie"""
         
         if data_source is None or data_source.empty:
+            print(f"DEBUG find_matching_names: data_source is None or empty for {employee_name}")
             return []
         
         # Rozšírené vyhľadávanie podľa podobnosti
@@ -404,21 +442,73 @@ class DataAnalyzer:
         all_persons = data_source['Osoba ▲'].unique()
         matching_names = []
         
+        print(f"DEBUG find_matching_names for '{employee_name}':")
+        print(f"  - Simplified target: '{simplified_target}'")
+        print(f"  - Total persons in data: {len(all_persons)}")
+        print(f"  - First 5 persons: {list(all_persons[:5])}")
+        
+        # NOVÁ LOGIKA: Špeciálne spracovanie pre iniciály
+        target_parts = employee_name.split()
+        target_surname = target_parts[0].strip() if len(target_parts) > 0 else ""
+        target_initial = ""
+        
+        # Extrahuj inicál z druhej časti (napr. "A.nást.10.3.25" -> "A")
+        if len(target_parts) > 1:
+            second_part = target_parts[1].strip()
+            if len(second_part) > 0:
+                target_initial = second_part[0].upper()
+        
+        print(f"  - Target surname: '{target_surname}', initial: '{target_initial}'")
+        
         for person in all_persons:
             simplified_person = self.simplify_name(person)
             
-            # Rôzne stratégie matchovania:
+            # OPRAVENÉ: Prísnejšie matchovanie
             similarity = SequenceMatcher(None, simplified_target, simplified_person).ratio()
-            if (
-                simplified_target == simplified_person or  # Presná zhoda
-                simplified_target in simplified_person or  # Čiastočná zhoda
-                simplified_person in simplified_target or  # Opačná čiastočná zhoda
-                similarity >= 0.8  # Podobnosť >= 80%
-            ):
+            
+            # Debug pre prvých pár osôb
+            if len(matching_names) < 5:
+                print(f"  - Comparing '{person}' (simplified: '{simplified_person}') -> similarity: {similarity:.3f}")
+            
+            # 1. Presná zhoda má najvyššiu prioritu
+            if simplified_target == simplified_person:
                 if person not in matching_names:
                     matching_names.append(person)
+                    print(f"  - EXACT MATCH: {person}")
+                    
+            # 2. NOVÉ: Iniciálové matchovanie (Airapetian A. -> Airapetian Asmik)
+            elif target_initial and len(target_surname) >= 3:
+                person_parts = person.split()
+                if len(person_parts) >= 2:
+                    person_surname = person_parts[0].strip()
+                    person_firstname = person_parts[1].strip()
+                    
+                    # Porovnaj priezvisko (simplifikované) a inicál
+                    surname_simplified_target = self.simplify_name(target_surname)
+                    surname_simplified_person = self.simplify_name(person_surname)
+                    
+                    surname_match = surname_simplified_target == surname_simplified_person
+                    initial_match = (len(person_firstname) > 0 and 
+                                   person_firstname[0].upper() == target_initial)
+                    
+                    if surname_match and initial_match:
+                        if person not in matching_names:
+                            matching_names.append(person)
+                            print(f"  - INITIAL MATCH: {person} (surname + initial)")
+                            
+            # 3. Čiastočné matchovanie len pre veľmi podobné mená (min 85% podobnosť) 
+            elif similarity >= 0.85:
+                # Dodatočná kontrola: priezvisko musí byť presne rovnaké
+                target_parts_check = employee_name.split()
+                person_parts_check = person.split()
+                
+                if (len(target_parts_check) >= 1 and len(person_parts_check) >= 1 and 
+                    self.simplify_name(target_parts_check[0]) == self.simplify_name(person_parts_check[0])):
+                    if person not in matching_names:
+                        matching_names.append(person)
+                        print(f"  - PARTIAL MATCH: {person} (similarity: {similarity:.3f})")
 
-        
+        print(f"  - Final matching names: {matching_names}")
         return matching_names
     
     # ✅ NOVÁ FUNKCIA - calculate_mail_score
@@ -690,3 +780,325 @@ class DataAnalyzer:
             'average_sales_per_employee': total_sales / total_employees if total_employees > 0 else 0,
             'workplace_stats': workplace_stats
         }
+    
+    def get_employee_monthly_data(self, employee_name, data_type='internet'):
+        """Získa mesačné dáta pre konkrétneho zamestnanca agregované podľa mesiacov"""
+        
+        if data_type == 'internet':
+            data_source = self.internet_data
+        else:
+            data_source = self.applications_data
+            
+        if data_source is None or data_source.empty:
+            return {}
+            
+        # Nájdi matchujúce mená
+        matching_names = self.find_matching_names(employee_name, data_source)
+        if not matching_names:
+            return {}
+            
+        # Filtrovanie dát pre zamestnanca
+        employee_data = data_source[data_source['Osoba ▲'].isin(matching_names)]
+        
+        if employee_data.empty:
+            return {}
+            
+        monthly_data = {}
+        
+        # Pre každý riadok dát
+        for _, row in employee_data.iterrows():
+            # Extrahovanie dátumu zo Source_File
+            month = None
+            
+            # 1. Pokus - Source_File stĺpec (z názvu súboru ako Report_Internet_TotalActiveTime_2025-08-16_12-00-35.xlsx)
+            if 'Source_File' in row and pd.notna(row['Source_File']):
+                import re
+                filename = str(row['Source_File'])
+                # Hľadáme vzor YYYY-MM-DD v názve súboru
+                date_match = re.search(r'(\d{4}-\d{2}-\d{2})', filename)
+                if date_match:
+                    date_str = date_match.group(1)
+                    try:
+                        from datetime import datetime
+                        date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+                        month = date_obj.strftime('%Y-%m')
+                    except:
+                        pass
+            
+            # 2. Pokus - ak máme nejaký dátumový stĺpec v dátach
+            if not month and 'Date' in row and pd.notna(row['Date']):
+                try:
+                    date_val = pd.to_datetime(row['Date'])
+                    month = date_val.strftime('%Y-%m')
+                except:
+                    pass
+            
+            # 3. Pokus - default na aktuálny mesiac
+            if not month:
+                from datetime import datetime
+                month = datetime.now().strftime('%Y-%m')
+            
+            if month not in monthly_data:
+                monthly_data[month] = {}
+                
+            # Agreguj všetky časové stĺpce
+            for col in row.index:
+                if col in ['Osoba ▲', 'Source_File', 'Date']:
+                    continue
+                    
+                time_value = row[col]
+                if pd.notna(time_value) and str(time_value) not in ['0:00', 'nan', '']:
+                    minutes = time_to_minutes(str(time_value))
+                    if minutes > 0:
+                        if col not in monthly_data[month]:
+                            monthly_data[month][col] = 0
+                        monthly_data[month][col] += minutes
+        
+        return monthly_data
+    
+    def get_all_employees_averages(self, data_type='internet'):
+        """Vypočíta priemery všetkých zamestnancov - OPRAVENÉ pre agregované dáta"""
+        
+        if data_type == 'internet':
+            data_source = self.internet_data
+            activity_columns = ['Mail', 'Chat', 'IS Sykora', 'SykoraShop', 'Web k praci', 'Hry', 'Nepracovni weby', 'Nezařazené', 'Umela inteligence', 'hladanie prace']
+        else:
+            data_source = self.applications_data  
+            activity_columns = ['Helios Green', 'Imos - program', 'Programy', 'Půdorysy', 'Mail', 'Chat', 'Internet']
+            
+        if data_source is None or data_source.empty:
+            return {}
+        
+        # Pre agregované dáta: jeden riadok = súčet zo všetkých dní
+        # Potrebujeme zistiť koľko dní reprezentuje jeden riadok
+        
+        # Pokús sa zistiť počet dní z timeline dát
+        try:
+            if data_type == 'internet':
+                from app import load_internet_data_detailed
+                detailed_data = load_internet_data_detailed()
+            else:
+                from app import load_applications_data_detailed  
+                detailed_data = load_applications_data_detailed()
+            
+            # Ak máme detailné dáta, spočítaj skutočný denný priemer
+            if detailed_data is not None and not detailed_data.empty:
+                all_employees = detailed_data['Osoba ▲'].unique()
+                company_averages = {}
+                
+                for col in activity_columns:
+                    employee_averages = []
+                    
+                    for employee in all_employees:
+                        employee_data = detailed_data[detailed_data['Osoba ▲'] == employee]
+                        
+                        if col in employee_data.columns:
+                            total_minutes = 0
+                            total_days = len(employee_data)
+                            
+                            for _, row in employee_data.iterrows():
+                                value = row.get(col, '0:00')
+                                total_minutes += time_to_minutes(str(value)) if pd.notna(value) else 0
+                            
+                            if total_days > 0:
+                                employee_daily_avg = (total_minutes / total_days) / 60
+                                employee_averages.append(employee_daily_avg)
+                    
+                    if employee_averages:
+                        company_averages[col] = round(sum(employee_averages) / len(employee_averages), 1)
+                    else:
+                        company_averages[col] = 0.0
+                        
+                return company_averages
+                
+        except:
+            pass  # Ak zlyhá timeline prístup, pokračuj s fallback
+        
+        # FALLBACK: Odhadni počet dní (napr. 20 pracovných dní za mesiac)
+        estimated_days = 20
+        all_employees = data_source['Osoba ▲'].unique()
+        company_averages = {}
+        
+        for col in activity_columns:
+            employee_averages = []
+            
+            for employee in all_employees:
+                employee_data = data_source[data_source['Osoba ▲'] == employee]
+                
+                if col in employee_data.columns and not employee_data.empty:
+                    # Jeden riadok = súčet za všetky dni
+                    total_minutes = 0
+                    for _, row in employee_data.iterrows():
+                        value = row.get(col, '0:00')
+                        total_minutes += time_to_minutes(str(value)) if pd.notna(value) else 0
+                    
+                    # Odhad denného priemeru
+                    employee_daily_avg = (total_minutes / estimated_days) / 60
+                    employee_averages.append(employee_daily_avg)
+            
+            if employee_averages:
+                company_averages[col] = round(sum(employee_averages) / len(employee_averages), 1)
+            else:
+                company_averages[col] = 0.0
+                
+        return company_averages
+    
+    def get_employee_averages(self, employee_name, data_type='internet'):
+        """Vypočíta CELKOVÉ SUMY všetkých denných hodnôt zamestnanca za sledované obdobie"""
+        
+        if data_type == 'internet':
+            data_source = self.internet_data
+            activity_columns = ['Mail', 'Chat', 'IS Sykora', 'SykoraShop', 'Web k praci', 'Hry', 'Nepracovni weby', 'Nezařazené', 'Umela inteligence', 'hladanie prace']
+        else:
+            data_source = self.applications_data
+            activity_columns = ['Helios Green', 'Imos - program', 'Programy', 'Půdorysy', 'Mail', 'Chat', 'Internet']
+            
+        if data_source is None or data_source.empty:
+            return {}
+            
+        # Nájdi matchujúce mená
+        matching_names = self.find_matching_names(employee_name, data_source)
+        if not matching_names:
+            return {}
+            
+        # Filtrovanie dát pre tohto zamestnanca
+        employee_data = data_source[data_source['Osoba ▲'].isin(matching_names)]
+        
+        if employee_data.empty:
+            return {}
+        
+        # VYPOČÍTAJ SÚČTY ZO VŠETKÝCH DENNÝCH RIADKOV
+        total_values = {}
+        
+        for col in activity_columns:
+            if col in employee_data.columns:
+                total_minutes = 0
+                
+                for _, row in employee_data.iterrows():
+                    value = row.get(col, '0:00')
+                    if pd.notna(value) and str(value) not in ['0:00', 'nan', '']:
+                        total_minutes += time_to_minutes(str(value))
+                
+                # Celkový súčet v hodinách
+                total_values[col] = round(total_minutes / 60, 1)
+            else:
+                total_values[col] = 0.0
+                
+        return total_values
+
+
+    def get_employee_daily_averages(self, employee_name, data_type='internet'):
+        """Vypočíta SKUTOČNÝ DENNÝ PRIEMER zamestnanca - OPRAVENÉ pre agregované dáta"""
+        
+        if data_type == 'internet':
+            data_source = self.internet_data
+            activity_columns = ['Mail', 'Chat', 'IS Sykora', 'SykoraShop', 'Web k praci', 'Hry', 'Nepracovni weby', 'Nezařazené', 'Umela inteligence', 'hladanie prace']
+        else:
+            data_source = self.applications_data
+            activity_columns = ['Helios Green', 'Imos - program', 'Programy', 'Půdorysy', 'Mail', 'Chat', 'Internet']
+            
+        if data_source is None or data_source.empty:
+            return {}
+            
+        # Nájdi matchujúce mená
+        matching_names = self.find_matching_names(employee_name, data_source)
+        if not matching_names:
+            return {}
+            
+        # Filtrovanie dát pre tohto zamestnanca
+        employee_data = data_source[data_source['Osoba ▲'].isin(matching_names)]
+        
+        if employee_data.empty:
+            return {}
+        
+        # Pokús sa použiť timeline dáta pre presný výpočet
+        try:
+            timeline_data = self.get_employee_daily_timeline(employee_name, data_type)
+            
+            if not timeline_data.empty:
+                # Máme detailné denné dáta
+                total_days = len(timeline_data)
+                daily_averages = {}
+                
+                for col in activity_columns:
+                    if col in timeline_data.columns:
+                        total_minutes = 0
+                        
+                        for _, row in timeline_data.iterrows():
+                            value = row.get(col, '0:00')
+                            minutes = time_to_minutes(str(value)) if pd.notna(value) else 0
+                            total_minutes += minutes
+                        
+                        if total_days > 0:
+                            daily_avg_hours = (total_minutes / total_days) / 60
+                            daily_averages[col] = round(daily_avg_hours, 1)
+                        else:
+                            daily_averages[col] = 0.0
+                    else:
+                        daily_averages[col] = 0.0
+                
+                return daily_averages
+                
+        except:
+            pass  # Fallback na agregované dáta
+        
+        # FALLBACK: Agregované dáta - odhadni počet dní
+        estimated_days = 20  # Odhad pracovných dní za mesiac
+        daily_averages = {}
+        
+        for col in activity_columns:
+            if col in employee_data.columns:
+                total_minutes = 0
+                
+                # V agregovaných dátach je jeden riadok = súčet za obdobie
+                for _, row in employee_data.iterrows():
+                    value = row.get(col, '0:00')
+                    minutes = time_to_minutes(str(value)) if pd.notna(value) else 0
+                    total_minutes += minutes
+                
+                # Denný priemer = celkový čas / odhadovaný počet dní
+                daily_avg_hours = (total_minutes / estimated_days) / 60
+                daily_averages[col] = round(daily_avg_hours, 1)
+            else:
+                daily_averages[col] = 0.0
+        
+        return daily_averages
+
+    def get_employee_daily_timeline(self, employee_name, data_type='internet'):
+        """NOVÁ funkcia pre načítanie denných dát s dátumami - používa detailné dáta"""
+        
+        try:
+            # Pokus sa načítať detailné dáta
+            if data_type == 'internet':
+                from app import load_internet_data_detailed
+                detailed_data = load_internet_data_detailed()
+            else:
+                from app import load_applications_data_detailed  
+                detailed_data = load_applications_data_detailed()
+            
+            if detailed_data is None or detailed_data.empty:
+                return pd.DataFrame()
+            
+            # Nájdi matchujúce mená zamestnanca
+            matching_names = self.find_matching_names(employee_name, detailed_data)
+            
+            if not matching_names:
+                return pd.DataFrame()
+            
+            # Filtrovanie dát pre tohto zamestnanca
+            employee_timeline = detailed_data[detailed_data['Osoba ▲'].isin(matching_names)]
+            
+            if employee_timeline.empty:
+                return pd.DataFrame()
+                
+            # Konvertuj Date stĺpec na datetime ak existuje
+            if 'Date' in employee_timeline.columns:
+                employee_timeline = employee_timeline.copy()
+                employee_timeline['Date'] = pd.to_datetime(employee_timeline['Date'])
+                employee_timeline = employee_timeline.sort_values('Date')
+            
+            employee_timeline['Employee'] = employee_name
+            return employee_timeline
+            
+        except Exception as e:
+            return pd.DataFrame()  # Vráť prázdny DataFrame pri chybe

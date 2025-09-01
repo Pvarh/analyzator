@@ -186,7 +186,7 @@ def filter_sales_data_new_logic(df, include_terminated=False):
 
 
 def load_internet_data():
-    """Load ALL internet data files - vyčistená verzia"""
+    """Load ALL internet data files - vrátené na agregované dáta"""
     
     from pathlib import Path
     import pandas as pd
@@ -224,7 +224,7 @@ def load_internet_data():
         
         combined_df = pd.concat(all_dataframes, ignore_index=True)
         
-        # Agregácia - bez debug výpisov
+        # Agregácia - obnovená
         time_columns = ['Mail', 'Chat', 'IS Sykora', 'SykoraShop', 'Web k praci', 
                        'Hry', 'Nepracovni weby', 'Čas celkem ▼', 'hladanie prace',
                        'Nezařazené', 'Umela inteligence']
@@ -269,7 +269,7 @@ def load_internet_data():
 
 
 def load_applications_data():
-    """Load ALL applications data files - vyčistená verzia bez debug výpisov"""
+    """Load ALL applications data files - vrátené na agregované dáta"""
     
     from pathlib import Path
     import pandas as pd
@@ -356,6 +356,118 @@ def load_applications_data():
         return None
 
 
+def load_internet_data_detailed():
+    """NOVÁ NADSTAVBA: Načíta individuálne denné záznamy pre timeline analýzu"""
+    
+    from pathlib import Path
+    import pandas as pd
+    
+    data_path = Path("data/raw")
+    
+    if not data_path.exists():
+        return None
+    
+    try:
+        all_files = list(data_path.glob("*.xlsx"))
+        internet_files = [f for f in all_files if 'internet' in f.name.lower()]
+        
+        if not internet_files:
+            return None
+        
+        all_dataframes = []
+        
+        for file in internet_files:
+            try:
+                df = pd.read_excel(file, header=8)
+                df_clean = df.dropna(subset=['Osoba ▲'])
+                df_final = df_clean[~df_clean['Osoba ▲'].astype(str).str.startswith('*')]
+                
+                if len(df_final) > 0:
+                    df_final = df_final.copy()
+                    df_final['Source_File'] = file.name
+                    
+                    # Extrahuj dátum z názvu súboru
+                    import re
+                    date_match = re.search(r'(\d{4}-\d{2}-\d{2})', file.name)
+                    if date_match:
+                        df_final['Date'] = date_match.group(1)
+                    else:
+                        df_final['Date'] = 'unknown'
+                    
+                    all_dataframes.append(df_final)
+                    
+            except Exception:
+                continue
+        
+        if not all_dataframes:
+            return None
+        
+        # ZACHOVÁ INDIVIDUÁLNE RIADKY (žiadna agregácia)
+        combined_df = pd.concat(all_dataframes, ignore_index=True)
+        
+        return combined_df
+        
+    except Exception:
+        return None
+
+
+def load_applications_data_detailed():
+    """NOVÁ NADSTAVBA: Načíta individuálne denné záznamy pre timeline analýzu"""
+    
+    from pathlib import Path
+    import pandas as pd
+    
+    data_path = Path("data/raw")
+    
+    if not data_path.exists():
+        return None
+    
+    try:
+        # Nájdi VŠETKY applications súbory
+        all_files = list(data_path.glob("*.xlsx"))
+        app_files = [f for f in all_files if 'application' in f.name.lower() and 'internet' not in f.name.lower()]
+        
+        if not app_files:
+            return None
+        
+        # KOMBINÁCIA VŠETKÝCH SÚBOROV
+        all_dataframes = []
+        
+        for file in app_files:
+            try:
+                df = pd.read_excel(file, header=8)
+                df_clean = df.dropna(subset=['Osoba ▲'])
+                df_final = df_clean[~df_clean['Osoba ▲'].astype(str).str.startswith('*')]
+                
+                if len(df_final) > 0:
+                    df_final = df_final.copy()
+                    df_final['Source_File'] = file.name
+                    
+                    # Extrahuj dátum z názvu súboru
+                    import re
+                    date_match = re.search(r'(\d{4}-\d{2}-\d{2})', file.name)
+                    if date_match:
+                        df_final['Date'] = date_match.group(1)
+                    else:
+                        df_final['Date'] = 'unknown'
+                    
+                    all_dataframes.append(df_final)
+                    
+            except Exception:
+                continue
+        
+        if not all_dataframes:
+            return None
+        
+        # ZACHOVÁ INDIVIDUÁLNE RIADKY (žiadna agregácia)
+        combined_df = pd.concat(all_dataframes, ignore_index=True)
+        
+        return combined_df
+        
+    except Exception:
+        return None
+
+
 
 
 
@@ -412,7 +524,12 @@ def initialize_session_state():
         
         # Vytvorenie analyzátora
         analyzer = DataAnalyzer()
-        analyzer.load_data(sales_data, internet_data, applications_data)
+        analyzer.load_data(
+            sales_data=sales_data, 
+            internet_data=internet_data, 
+            applications_data=applications_data,
+            data_path="data/raw"  # ✅ PRIDANÉ
+        )
         analyzer.raw_sales_data = raw_sales_df  # Pridáme aj pôvodné DataFrame
         analyzer.validate_sales_consistency()
         
