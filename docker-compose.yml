@@ -7,11 +7,11 @@ services:
     ports:
       - "8501:8501"
     volumes:
-      # Trvalé uloženie dát na serveri
-      - ./server-data/raw:/app/data/raw
-      - ./server-data/studio:/app/data/studio  
-      - ./server-data/auth:/app/auth
-      - ./server-data/logs:/app/logs
+      # ✅ OPRAVENÉ - mapuje existujúce adresáre
+      - ./data/raw:/app/data/raw
+      - ./data/studio:/app/data/studio  
+      - ./auth:/app/auth
+      - ./logs:/app/logs
     environment:
       - PYTHONPATH=/app
       - STREAMLIT_SERVER_HEADLESS=true
