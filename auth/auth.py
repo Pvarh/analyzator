@@ -400,59 +400,8 @@ def show_user_info():
         
         st.markdown("---")
         
-        # Možnosť zmeny hesla - iba pre admina
-        if user['role'] == 'admin':
-            if st.button("� Zmeniť heslo", use_container_width=True):
-                st.session_state.show_change_password = True
-        else:
-            st.caption("🔒 Pre zmenu hesla kontaktujte administrátora")
-        
-        if st.button("�🚪 Odhlásiť sa", use_container_width=True):
+        if st.button("Odhlasiť sa", use_container_width=True):
             logout()
-        
-        # Formulár na zmenu hesla - iba pre admina
-        if user['role'] == 'admin' and st.session_state.get('show_change_password', False):
-            show_change_password_form()
-
-def show_change_password_form():
-    """Zobrazí formulár na zmenu hesla - iba pre adminov"""
-    st.markdown("---")
-    st.markdown("### 🔑 Zmena hesla")
-    
-    with st.form("change_password_form"):
-        old_password = st.text_input("Staré heslo:", type="password")
-        new_password = st.text_input("Nové heslo:", type="password") 
-        confirm_password = st.text_input("Potvrdiť nové heslo:", type="password")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            if st.form_submit_button("✅ Zmeniť", type="primary"):
-                if not old_password or not new_password or not confirm_password:
-                    st.error("⚠️ Vyplňte všetky polia!")
-                elif new_password != confirm_password:
-                    st.error("❌ Nové heslá sa nezhodujú!")
-                elif len(new_password) < 4:
-                    st.error("⚠️ Heslo musí mať aspoň 4 znaky!")
-                else:
-                    user_db = st.session_state.get('user_db')
-                    current_user = get_current_user()
-                    
-                    if user_db and current_user and current_user['role'] == 'admin':
-                        if user_db.change_own_password(current_user['email'], old_password, new_password):
-                            st.success("✅ Heslo bolo úspešne zmenené!")
-                            st.session_state.show_change_password = False
-                            st.rerun()
-                        else:
-                            st.error("❌ Nesprávne staré heslo!")
-                    else:
-                        st.error("❌ Iba admin môže meniť heslo!")
-        
-        with col2:
-            if st.form_submit_button("❌ Zrušiť"):
-                st.session_state.show_change_password = False
-                st.rerun()
-
 
 def has_feature_access(feature: str) -> bool:
     """Kontroluje, či má aktuálny používateľ prístup k funkcii"""
