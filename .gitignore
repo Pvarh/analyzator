@@ -47,8 +47,8 @@ desktop.ini
 
 # Lokálne dáta - NEBUDÚ sa synchronizovať
 auth/sessions.json
-data/raw/*
-data/studio/*
+#data/raw/*
+#data/studio/*
 *.log
 logs/activity.json
 logs/server_metrics.json
