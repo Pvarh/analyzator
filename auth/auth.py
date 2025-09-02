@@ -322,8 +322,8 @@ def show_login_page():
         with st.form("login_form"):
             email = st.text_input(
                 "📧 Email", 
-                placeholder="meno@sykora.eu",
-                help="Používajte iba @sykora.eu emailové adresy"
+                placeholder="meno@sykora.eu alebo meno@sykorahome.cz",
+                help="Používajte @sykora.eu alebo @sykorahome.cz emailové adresy"
             )
             password = st.text_input(
                 "🔑 Heslo", 
@@ -343,8 +343,8 @@ def show_login_page():
             if submitted:
                 if not email or not password:
                     st.error("⚠️ Vyplňte všetky polia")
-                elif not email.endswith("@sykora.eu"):
-                    st.error("❌ Povolené sú iba @sykora.eu emailové adresy")
+                elif not (email.endswith("@sykora.eu") or email.endswith("@sykorahome.cz")):
+                    st.error("❌ Povolené sú iba @sykora.eu a @sykorahome.cz emailové adresy")
                 else:
                     user = st.session_state.user_db.authenticate(email, password)
                     if user:
