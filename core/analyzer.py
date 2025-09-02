@@ -27,30 +27,6 @@ class DataAnalyzer:
         self.applications_data = applications_data
         self.data_path = data_path  # ✅ PRIDANÉ
         
-        # DEBUG výpisy - použije streamlit ak je dostupný
-        try:
-            import streamlit as st
-            st.write("DEBUG LOAD_DATA:")
-            st.write(f"  - Sales employees: {len(self.sales_employees) if self.sales_employees else 0}")
-            st.write(f"  - Internet data: {len(self.internet_data) if self.internet_data is not None else 0} riadkov")
-            st.write(f"  - Applications data: {len(self.applications_data) if self.applications_data is not None else 0} riadkov")
-            st.write(f"  - Data path: {self.data_path}")
-            
-            if self.internet_data is not None:
-                st.write(f"  - Internet unique persons: {len(self.internet_data['Osoba ▲'].unique())}")
-                st.write(f"  - First 3 internet persons: {list(self.internet_data['Osoba ▲'].unique()[:3])}")
-        except:
-            # Fallback na print ak streamlit nie je dostupný
-            print(f"DEBUG LOAD_DATA:")
-            print(f"  - Sales employees: {len(self.sales_employees) if self.sales_employees else 0}")
-            print(f"  - Internet data: {len(self.internet_data) if self.internet_data is not None else 0} riadkov")
-            print(f"  - Applications data: {len(self.applications_data) if self.applications_data is not None else 0} riadkov")
-            print(f"  - Data path: {self.data_path}")
-            
-            if self.internet_data is not None:
-                print(f"  - Internet unique persons: {len(self.internet_data['Osoba ▲'].unique())}")
-                print(f"  - First 3 internet persons: {list(self.internet_data['Osoba ▲'].unique()[:3])}")
-        
         # Vytvorenie name mappingu
         self._create_name_mapping()
         
