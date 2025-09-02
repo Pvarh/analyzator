@@ -88,7 +88,7 @@ class UserDatabase:
     def add_user(self, email: str, password: str, role: str, cities: List[str], name: str) -> bool:
         """Pridá nového používateľa"""
         # Validácie
-        if not email or not email.endswith("@sykora.eu"):
+        if not email or not (email.endswith("@sykora.eu") or email.endswith("@sykorahome.cz")):
             return False
         
         if not password or len(password) < 1:

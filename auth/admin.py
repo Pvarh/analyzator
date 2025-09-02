@@ -232,7 +232,7 @@ def show_add_user_form(user_db):
         
         with col1:
             name = st.text_input("👤 Meno a priezvisko", placeholder="Jan Novák")
-            email = st.text_input("📧 Email", placeholder="jan.novak@sykora.eu")
+            email = st.text_input("📧 Email", placeholder="jan.novak@sykora.eu alebo jan.novak@sykorahome.cz")
         
         with col2:
             role = st.selectbox("🏢 Rola", options=["manager", "admin"])
@@ -250,8 +250,8 @@ def show_add_user_form(user_db):
         if submitted:
             if not all([name, email, password]):
                 st.error("❌ Všetky polia sú povinné!")
-            elif not email.endswith("@sykora.eu"):
-                st.error("❌ Email musí končiť na @sykora.eu")
+            elif not (email.endswith("@sykora.eu") or email.endswith("@sykorahome.cz")):
+                st.error("❌ Email musí končiť na @sykora.eu alebo @sykorahome.cz")
             elif role == "manager" and not cities:
                 st.error("❌ Pre manažéra musíte vybrať aspoň jedno mesto!")
             else:
