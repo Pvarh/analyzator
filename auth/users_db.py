@@ -40,11 +40,14 @@ class UserDatabase:
     def ensure_admin_exists(self):
         """Zabezpečí, že admin účet existuje"""
         admin_email = "pvarhalik@sykora.eu"
-        admin_password = "01011970"
         
         if admin_email not in self.users:
+            # Pri prvom vytvorení admin účtu je potrebné nastaviť heslo manuálne
+            # Hash pre heslo "admin123" - musí sa zmeniť po prvom prihlásení
+            default_password_hash = "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9"  # admin123
+            
             self.users[admin_email] = {
-                "password_hash": self.hash_password(admin_password),
+                "password_hash": default_password_hash,
                 "role": "admin",
                 "cities": ["all"],  # Admin vidí všetky mestá
                 "name": "Peter Varhalik",
@@ -56,6 +59,8 @@ class UserDatabase:
                 }
             }
             self.save_users()
+            print("⚠️  BEZPEČNOSTNÉ UPOZORNENIE: Admin účet vytvorený s default heslom 'admin123'")
+            print("⚠️  OKAMŽITE ZMEŇTE HESLO PO PRVOM PRIHLÁSENÍ!")
         else:
             # Ak admin už existuje, ale nemá features, pridaj ich
             if "features" not in self.users[admin_email]:
@@ -118,6 +123,20 @@ class UserDatabase:
         if email not in self.users:
             return False
         
+        self.users[email]["password_hash"] = self.hash_password(new_password)
+        return self.save_users()
+    
+    def change_own_password(self, email: str, old_password: str, new_password: str) -> bool:
+        """Umožní používateľovi zmeniť si vlastné heslo"""
+        if email not in self.users:
+            return False
+        
+        # Overenie starého hesla
+        old_password_hash = self.hash_password(old_password)
+        if self.users[email]["password_hash"] != old_password_hash:
+            return False
+        
+        # Nastavenie nového hesla
         self.users[email]["password_hash"] = self.hash_password(new_password)
         return self.save_users()
     
