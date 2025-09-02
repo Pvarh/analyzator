@@ -1,33 +1,47 @@
 #!/bin/bash
+#
+# Analyzator Update Script
+# Tento skript aktualizuje aplikáciu z GitHub repozitára a reštartuje Docker kontajner
+#
 
-echo "🔄 Aktualizujem Analyzator..."
+echo "🔄 Analyzator Update Script"
+echo "=========================="
 
-# Backup aktuálnej verzie
-echo "📦 Vytváram zálohu..."
-cp -r /home/user/analyzator /home/user/analyzator-backup-$(date +%Y%m%d-%H%M%S)
+# Kontrola, či sme v správnom adresári
+if [ ! -f "docker-compose.yml" ]; then
+    echo "❌ ERROR: docker-compose.yml nenájdený! Spustite skript v root adresári analyzátora."
+    exit 1
+fi
 
-# Prejsť do adresára
-cd /home/user/analyzator
-
-# Zastaviť aplikáciu
-echo "⏸️ Zastavujem aplikáciu..."
-docker-compose down
-
-# Stiahnuť najnovšie zmeny
-echo "⬇️ Sťahujem zmeny..."
+echo "📥 Sťahujem najnovšie zmeny z GitHub..."
 git pull origin main
 
-# Rebuild a spustiť
-echo "🔨 Rebuilding a spúšťam..."
-docker-compose up -d --build
+if [ $? -ne 0 ]; then
+    echo "❌ ERROR: Git pull zlyhal!"
+    exit 1
+fi
 
-# Počkať na spustenie
-echo "⏳ Čakám na spustenie..."
-sleep 15
+echo "� Zastavujem Docker kontajner..."
+docker-compose down
 
-# Kontrola stavu
-echo "📊 Kontrola stavu..."
-docker-compose ps
+echo "🚀 Spúšťam aktualizovaný Docker kontajner..."
+docker-compose up --build -d
 
-echo "✅ Aktualizácia dokončená!"
-echo "🌐 App dostupná na: http://$(hostname -I | awk '{print $1}'):8501"
+if [ $? -eq 0 ]; then
+    echo "✅ Aktualizácia úspešná!"
+    echo "🌐 Aplikácia je dostupná na: http://$(hostname -I | awk '{print $1}'):8501"
+    
+    echo ""
+    echo "📊 Status kontajnera:"
+    docker-compose ps
+    
+    echo ""
+    echo "📋 Pre sledovanie logov použite:"
+    echo "   docker-compose logs -f analyzator"
+else
+    echo "❌ ERROR: Spustenie kontajnera zlyhalo!"
+    exit 1
+fi
+
+echo ""
+echo "🎉 Update dokončený!"
