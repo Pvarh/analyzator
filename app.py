@@ -28,11 +28,16 @@ def load_sales_data():
     """Načíta sales dáta s opravenou logikou filtrovania"""
     
     try:
-        data_path = Path("data/raw")
+        # ✅ OPRAVENÉ - hľadá v sales priečinku
+        data_path = Path("data/sales")
         
+        # ✅ Ak sales neexistuje, skús aj raw ako backup
+        if not data_path.exists():
+            data_path = Path("data/raw")
+            
         if not data_path.exists():
             st.error(f"Priečinok {data_path} neexistuje!")
-            return []
+            return pd.DataFrame(), pd.DataFrame()  # ✅ Vráti tuple namiesto listu
         
         # Nájdi sales súbor
         sales_candidates = []
@@ -43,7 +48,7 @@ def load_sales_data():
         
         if not sales_candidates:
             st.error("❌ Žiadny sales súbor nenájdený!")
-            return []
+            return pd.DataFrame(), pd.DataFrame()  # ✅ Vráti tuple namiesto listu
         
         sales_file = sales_candidates[0]
         
@@ -102,11 +107,11 @@ def load_sales_data():
             
             sales_employees.append(employee)
         
-        return sales_employees, df_filtered  # Vrátim aj pôvodné DataFrame
+        return sales_employees, df_filtered  # ✅ Vráti tuple s 2 hodnotami
         
     except Exception as e:
         st.error(f"Chyba pri načítaní sales dát: {e}")
-        return []
+        return pd.DataFrame(), pd.DataFrame()  # ✅ Vráti tuple namiesto listu
 
 
 
