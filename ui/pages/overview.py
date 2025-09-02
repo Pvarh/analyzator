@@ -15,7 +15,9 @@ from ui.styling import (
     create_subsection_header, create_metric_card, create_simple_metric_card,
     create_three_column_layout
 )
+from core.error_handler import handle_error, log_error
 
+@handle_error
 def render(analyzer):
     """Hlavný prehľad dashboard s novou analyzer triedou"""
     apply_dark_theme()

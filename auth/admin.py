@@ -129,9 +129,10 @@ def show_admin_page():
     st.title("👑 Admin Panel - Kompletný systém je úspešne nasadený!")
     
     # Activity logs ako prvý tab
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
         "📊 Aktivita logov",
         "🖥️ Server Monitor",
+        "🐛 Error Logs",
         "➕ Pridať používateľa", 
         "📋 Zoznam používateľov", 
         "🎛️ Správa funkcií",
@@ -152,19 +153,119 @@ def show_admin_page():
             show_server_monitoring_tab()
     
     with tab3:
-        show_add_user_form(user_db)
+        show_error_logs()
     
     with tab4:
-        show_users_list(user_db)
+        show_add_user_form(user_db)
     
     with tab5:
-        show_feature_management(user_db)
+        show_users_list(user_db)
     
     with tab6:
-        show_admin_change_password(user_db)
+        show_feature_management(user_db)
     
     with tab7:
+        show_admin_change_password(user_db)
+    
+    with tab8:
         show_data_management()
+
+def show_error_logs():
+    """Zobrazí error logy aplikácie"""
+    from core.error_handler import get_recent_errors, clear_old_errors
+    
+    st.subheader("🐛 Error Logs - Sledovanie chýb aplikácie")
+    
+    # Ovládacie tlačidlá
+    col1, col2, col3 = st.columns([2, 1, 1])
+    
+    with col1:
+        limit = st.selectbox("📊 Počet chýb na zobrazenie:", [10, 25, 50, 100], index=1)
+    
+    with col2:
+        if st.button("🔄 Obnoviť", help="Znovu načítať error logy"):
+            st.rerun()
+    
+    with col3:
+        if st.button("🗑️ Vyčistiť staré", help="Zmaže chyby staršie ako 30 dní"):
+            clear_old_errors()
+            st.success("✅ Staré chyby boli vymazané")
+            st.rerun()
+    
+    st.divider()
+    
+    # Získanie error logov
+    try:
+        errors = get_recent_errors(limit)
+        
+        if not errors:
+            st.success("🎉 Žiadne chyby zaznamené!")
+            st.info("💡 To je dobré! Aplikácia beží bez problémov.")
+            return
+        
+        st.warning(f"⚠️ Nájdených {len(errors)} chýb")
+        
+        # Štatistiky chýb
+        error_types = {}
+        user_errors = {}
+        
+        for error in errors:
+            error_type = error.get('error_type', 'Unknown')
+            user_email = error.get('user_email', 'Unknown')
+            
+            error_types[error_type] = error_types.get(error_type, 0) + 1
+            user_errors[user_email] = user_errors.get(user_email, 0) + 1
+        
+        # Dashboard chýb
+        col_stats1, col_stats2 = st.columns(2)
+        
+        with col_stats1:
+            st.markdown("#### 📈 Typy chýb")
+            for error_type, count in sorted(error_types.items(), key=lambda x: x[1], reverse=True):
+                st.write(f"• **{error_type}**: {count}x")
+        
+        with col_stats2:
+            st.markdown("#### 👥 Chyby podľa používateľov")
+            for user, count in sorted(user_errors.items(), key=lambda x: x[1], reverse=True):
+                st.write(f"• **{user}**: {count}x")
+        
+        st.divider()
+        
+        # Detail chýb
+        st.markdown("#### 🔍 Detail chýb")
+        
+        for i, error in enumerate(errors):
+            with st.expander(f"🐛 #{i+1}: {error.get('error_type', 'Unknown')} - {error.get('timestamp', 'Unknown')[:19]}"):
+                
+                # Základné info
+                col_err1, col_err2 = st.columns(2)
+                
+                with col_err1:
+                    st.write("**📅 Čas:**", error.get('timestamp', 'Unknown'))
+                    st.write("**🏷️ Typ:**", error.get('error_type', 'Unknown'))
+                    st.write("**👤 Používateľ:**", error.get('user_email', 'Unknown'))
+                
+                with col_err2:
+                    st.write("**💬 Správa:**")
+                    st.code(error.get('error_message', 'No message'), language='text')
+                
+                # Context a session state
+                if error.get('context'):
+                    st.write("**🔧 Kontext:**")
+                    st.json(error['context'])
+                
+                if error.get('session_state'):
+                    st.write("**📋 Session State:**")
+                    st.json(error['session_state'])
+                
+                # Traceback
+                if error.get('traceback'):
+                    st.write("**📋 Stack Trace:**")
+                    st.code(error['traceback'], language='python')
+    
+    except Exception as e:
+        st.error(f"❌ Chyba pri načítaní error logov: {e}")
+        st.info("💡 Skontrolujte či existuje súbor logs/errors.json")
 
 def show_activity_logs():
     """Zobrazí activity logy manažérov"""

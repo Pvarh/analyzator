@@ -19,11 +19,15 @@ from auth.admin import show_admin_page
 # Import server monitoring
 from core.server_monitor import get_server_monitor
 
+# Import error handling
+from core.error_handler import handle_error, log_error
+
 import sys
 import inspect
 from datetime import datetime
 
 
+@handle_error
 def load_sales_data():
     """Načíta sales dáta s opravenou logikou filtrovania"""
     
@@ -506,6 +510,7 @@ def calculate_employee_score_from_sales_amount(total_sales):
     final_score = max(20, min(95, base_score + variation))
     return round(final_score, 2)
 
+@handle_error
 def initialize_session_state():
     """Inicializácia s forced reload pri zmene nastavení"""
     
@@ -695,26 +700,57 @@ def create_sidebar():
 
 
 def main():
-    st.set_page_config(
-        page_title="Dashboard produktivity zaměstnanců", 
-        page_icon="📊", 
-        layout="wide",
-        initial_sidebar_state="expanded"
-    )
-    
-    # Inicializácia autentifikačného systému
-    init_auth()
-    
-    # Inicializácia server monitoring
-    monitor = get_server_monitor()
-    if not monitor.monitoring:
-        monitor.start_monitoring(interval_seconds=120)  # Každé 2 minúty
-    
-    # Ak používateľ nie je prihlásený, zobraz login stránku
-    if not is_authenticated():
-        show_login_page()
-        return
-    
+    """Hlavná funkcia aplikácie s error handlingom"""
+    try:
+        st.set_page_config(
+            page_title="Dashboard produktivity zaměstnanců", 
+            page_icon="📊", 
+            layout="wide",
+            initial_sidebar_state="expanded"
+        )
+        
+        # Inicializácia autentifikačného systému
+        init_auth()
+        
+        # Inicializácia server monitoring
+        monitor = get_server_monitor()
+        if not monitor.monitoring:
+            monitor.start_monitoring(interval_seconds=120)  # Každé 2 minúty
+        
+        # Ak používateľ nie je prihlásený, zobraz login stránku
+        if not is_authenticated():
+            show_login_page()
+            return
+        
+        # Volanie hlavnej aplikačnej logiky
+        run_main_application()
+        
+    except Exception as e:
+        # Globálne error handling
+        log_error(e, {
+            "function": "main",
+            "page": st.session_state.get('current_page', 'unknown')
+        })
+        
+        st.error("❌ Nastala kritická chyba aplikácie")
+        
+        # Pre adminov zobraz detaily
+        try:
+            if is_admin():
+                with st.expander("🔧 Detaily chyby (len pre adminov)"):
+                    st.code(f"Error: {type(e).__name__}")
+                    st.code(f"Message: {str(e)}")
+                    st.code(f"Page: {st.session_state.get('current_page', 'unknown')}")
+        except:
+            pass
+        
+        # Tlačidlo na refresh
+        if st.button("🔄 Obnoviť aplikáciu"):
+            st.rerun()
+
+
+def run_main_application():
+    """Hlavná aplikačná logika oddelená od error handlingu"""
     # Inicializácia session state
     initialize_session_state()
     
