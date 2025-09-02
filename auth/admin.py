@@ -104,12 +104,13 @@ def show_admin_page():
     st.title("👑 Admin Panel - Kompletný systém je úspešne nasadený!")
     
     # Activity logs ako prvý tab
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
         "📊 Aktivita logov",
         "🖥️ Server Monitor",
         "➕ Pridať používateľa", 
         "📋 Zoznam používateľov", 
-        "🎛️ Správa funkcií", 
+        "🎛️ Správa funkcií",
+        "🔑 Zmena hesla",
         "📁 Správa dát"
     ])
     
@@ -135,6 +136,9 @@ def show_admin_page():
         show_feature_management(user_db)
     
     with tab6:
+        show_admin_change_password(user_db)
+    
+    with tab7:
         show_data_management()
 
 def show_activity_logs():
@@ -328,6 +332,114 @@ def show_users_list(user_db):
                             st.error("❌ Chyba pri mazaní používateľa")
         
         st.markdown("---")
+
+def show_admin_change_password(user_db):
+    """Zobrazí formulár pre zmenu admin hesla"""
+    st.subheader("🔑 Zmena admin hesla")
+    
+    current_user = get_current_user()
+    if not current_user or current_user.get('role') != 'admin':
+        st.error("❌ Iba admin môže meniť heslo")
+        return
+    
+    st.info(f"👤 Meniate heslo pre: **{current_user['name']}** ({current_user['email']})")
+    
+    with st.form("admin_change_password_form", clear_on_submit=True):
+        st.markdown("### 🔐 Zadajte údaje pre zmenu hesla")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            old_password = st.text_input(
+                "🔑 Súčasné heslo:", 
+                type="password",
+                help="Zadajte vaše aktuálne heslo"
+            )
+            
+        with col2:
+            new_password = st.text_input(
+                "🆕 Nové heslo:", 
+                type="password",
+                help="Zadajte nové heslo (min. 4 znaky)"
+            )
+        
+        confirm_password = st.text_input(
+            "✅ Potvrdiť nové heslo:", 
+            type="password",
+            help="Zadajte nové heslo znovu pre potvrdenie"
+        )
+        
+        st.markdown("---")
+        
+        col_submit1, col_submit2, col_submit3 = st.columns([1, 1, 2])
+        
+        with col_submit1:
+            submit_button = st.form_submit_button("🔄 Zmeniť heslo", type="primary", use_container_width=True)
+        
+        with col_submit2:
+            clear_button = st.form_submit_button("🗑️ Vyčistiť", use_container_width=True)
+        
+        # Spracovanie formuláru
+        if submit_button:
+            if not old_password:
+                st.error("⚠️ Zadajte súčasné heslo!")
+            elif not new_password:
+                st.error("⚠️ Zadajte nové heslo!")
+            elif not confirm_password:
+                st.error("⚠️ Potvrďte nové heslo!")
+            elif new_password != confirm_password:
+                st.error("❌ Nové heslá sa nezhodujú!")
+            elif len(new_password) < 4:
+                st.error("⚠️ Nové heslo musí mať aspoň 4 znaky!")
+            elif old_password == new_password:
+                st.error("⚠️ Nové heslo musí byť iné ako súčasné!")
+            else:
+                # Pokus o zmenu hesla
+                success = user_db.change_own_password(
+                    current_user['email'], 
+                    old_password, 
+                    new_password
+                )
+                
+                if success:
+                    st.success("✅ **Heslo bolo úspešne zmenené!**")
+                    st.info("🔒 Pri ďalšom prihlásení použite nové heslo")
+                    
+                    # Voliteľné: automatické odhlásenie po zmene hesla
+                    if st.button("🚪 Odhlásiť sa teraz", type="secondary"):
+                        st.session_state.authenticated_user = None
+                        st.rerun()
+                        
+                else:
+                    st.error("❌ **Nesprávne súčasné heslo!**")
+                    st.warning("🔍 Skontrolujte, či ste zadali správne súčasné heslo")
+        
+        elif clear_button:
+            st.info("🗑️ Formulár bol vyčistený")
+    
+    # Bezpečnostné upozornenia
+    st.markdown("---")
+    st.markdown("### 🛡️ Bezpečnostné odporúčania")
+    
+    col_tips1, col_tips2 = st.columns(2)
+    
+    with col_tips1:
+        st.markdown("""
+        **🔐 Silné heslo obsahuje:**
+        - Aspoň 8 znakov
+        - Veľké a malé písmená
+        - Čísla a špeciálne znaky
+        - Nie je slovníkové slovo
+        """)
+    
+    with col_tips2:
+        st.markdown("""
+        **⚠️ Bezpečnostné pravidlá:**
+        - Nikdy nezdieľajte heslo
+        - Nepoužívajte rovnaké heslo
+        - Pravidelne meňte heslo
+        - Používajte password manager
+        """)
 
 def show_password_reset_form(user, reset_key, user_db):
     """Zobrazí formulár pre reset hesla používateľa"""
