@@ -199,20 +199,13 @@ def load_internet_data():
     data_path = Path("data/raw")
     
     if not data_path.exists():
-        print(f"DEBUG: Cesta {data_path} neexistuje")
         return None
     
     try:
         all_files = list(data_path.glob("*.xlsx"))
         internet_files = [f for f in all_files if 'internet' in f.name.lower()]
         
-        print(f"DEBUG: Nájdené súbory celkovo: {len(all_files)}")
-        print(f"DEBUG: Internet súbory: {len(internet_files)}")
-        if internet_files:
-            print(f"DEBUG: Prvé 3 internet súbory: {[f.name for f in internet_files[:3]]}")
-        
         if not internet_files:
-            print("DEBUG: Žiadne internet súbory nenájdené")
             return None
         
         all_dataframes = []
@@ -273,13 +266,9 @@ def load_internet_data():
         
         aggregated_df = combined_df.groupby('Osoba ▲').agg(agg_dict).reset_index()
         
-        print(f"DEBUG: Internet data úspešne načítané - {len(aggregated_df)} zamestnancov")
-        print(f"DEBUG: Internet stĺpce: {list(aggregated_df.columns)}")
-        
         return aggregated_df
         
     except Exception as e:
-        print(f"DEBUG: Chyba pri načítaní internet data: {e}")
         return None
 
 
@@ -293,7 +282,6 @@ def load_applications_data():
     data_path = Path("data/raw")
     
     if not data_path.exists():
-        print(f"DEBUG: Cesta {data_path} neexistuje")
         return None
     
     try:
@@ -301,13 +289,7 @@ def load_applications_data():
         all_files = list(data_path.glob("*.xlsx"))
         app_files = [f for f in all_files if 'applications' in f.name.lower() and 'internet' not in f.name.lower()]
         
-        print(f"DEBUG: Nájdené súbory celkovo: {len(all_files)}")
-        print(f"DEBUG: Applications súbory: {len(app_files)}")
-        if app_files:
-            print(f"DEBUG: Prvé 3 app súbory: {[f.name for f in app_files[:3]]}")
-        
         if not app_files:
-            print("DEBUG: Žiadne applications súbory nenájdené")
             return None
         
         # KOMBINÁCIA VŠETKÝCH SÚBOROV
@@ -373,13 +355,9 @@ def load_applications_data():
         # Finálna agregácia podľa osoby
         aggregated_df = combined_df.groupby('Osoba ▲').agg(agg_dict).reset_index()
         
-        print(f"DEBUG: Applications data úspešne načítané - {len(aggregated_df)} zamestnancov")
-        print(f"DEBUG: Applications stĺpce: {list(aggregated_df.columns)}")
-        
         return aggregated_df
         
     except Exception as e:
-        print(f"DEBUG: Chyba pri načítaní applications data: {e}")
         return None
 
 

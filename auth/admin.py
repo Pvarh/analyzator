@@ -250,15 +250,20 @@ def show_add_user_form(user_db):
         if submitted:
             if not all([name, email, password]):
                 st.error("❌ Všetky polia sú povinné!")
+            elif not email.endswith("@sykora.eu"):
+                st.error("❌ Email musí končiť na @sykora.eu")
             elif role == "manager" and not cities:
                 st.error("❌ Pre manažéra musíte vybrať aspoň jedno mesto!")
             else:
-                success = user_db.add_user(email, password, role, cities, name)
-                if success:
-                    st.success(f"✅ Používateľ {name} bol úspešne pridaný!")
-                    st.rerun()
-                else:
-                    st.error("❌ Používateľ sa nepodarilo pridať (možno už existuje)")
+                try:
+                    success = user_db.add_user(email, password, role, cities, name)
+                    if success:
+                        st.success(f"✅ Používateľ {name} bol úspešne pridaný!")
+                        st.rerun()
+                    else:
+                        st.error("❌ Používateľ sa nepodarilo pridať - možno už existuje alebo problém s oprávneniami súboru")
+                except Exception as e:
+                    st.error(f"❌ Chyba pri pridávaní používateľa: {e}")
 
 def show_users_list(user_db):
     """Zoznam všetkých používateľov"""

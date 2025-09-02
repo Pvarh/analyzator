@@ -27,10 +27,9 @@ class UserDatabase:
             os.makedirs(os.path.dirname(self.db_file), exist_ok=True)
             with open(self.db_file, 'w', encoding='utf-8') as f:
                 json.dump(self.users, f, indent=2, ensure_ascii=False)
-            print(f"DEBUG: Users saved successfully to {self.db_file}")
             return True
         except Exception as e:
-            print(f"DEBUG: Error saving users: {e}")
+            print(f"ERROR: Cannot save users: {e}")
             return False
     
     def hash_password(self, password: str) -> str:
@@ -90,22 +89,16 @@ class UserDatabase:
         """Pridá nového používateľa"""
         # Validácie
         if not email or not email.endswith("@sykora.eu"):
-            print(f"DEBUG: Email validation failed for {email}")
             return False
         
         if not password or len(password) < 1:
-            print(f"DEBUG: Password validation failed")
             return False
         
         if email in self.users:
-            print(f"DEBUG: User {email} already exists")
             return False
         
         if not name or len(name.strip()) < 1:
-            print(f"DEBUG: Name validation failed for '{name}'")
             return False
-        
-        print(f"DEBUG: Adding user - email={email}, role={role}, cities={cities}, name={name}")
         
         self.users[email] = {
             "password_hash": self.hash_password(password),
@@ -115,9 +108,7 @@ class UserDatabase:
             "active": True
         }
         
-        result = self.save_users()
-        print(f"DEBUG: Save result: {result}")
-        return result
+        return self.save_users()
     
     def update_user(self, email: str, **kwargs) -> bool:
         """Aktualizuje používateľa"""
