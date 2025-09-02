@@ -287,11 +287,11 @@ def show_users_list(user_db):
     for user in users:
         user_email = user['email']
         password_key = f"password_{user_email}"
-        verification_key = f"verification_{user_email}"
         
-        # Ak je v režime overenia pre tohto používateľa
-        if st.session_state.verification_mode.get(verification_key, False):
-            show_password_verification_form(user, password_key, verification_key, user_db)
+        # Ak je v režime reset hesla pre tohto používateľa
+        reset_key = f"reset_{user_email}"
+        if st.session_state.verification_mode.get(reset_key, False):
+            show_password_reset_form(user, reset_key, user_db)
             continue
         
         with st.container():
@@ -302,15 +302,8 @@ def show_users_list(user_db):
                 st.markdown(f"**{role_icon} {user['name']}**")
                 st.markdown(f"📧 {user['email']}")
                 
-                # Zobrazenie hesla ak je odblokované
-                if st.session_state.show_passwords.get(password_key, False):
-                    # Získaj skutočné heslo z databázy
-                    raw_password = user_db.get_raw_password(user['email'])
-                    if raw_password:
-                        st.markdown(f"🔑 **Heslo**: `{raw_password}`")
-                        st.caption("⚠️ Heslo je zobrazené v plain texte")
-                    else:
-                        st.markdown("🔑 **Heslo**: `[Chyba pri načítaní]`")
+                # Info o hesle - bez zobrazenia plain textu
+                st.caption("🔐 Heslo je zabezpečené (hash)")
             
             with col2:
                 if user['role'] == 'admin':
@@ -320,15 +313,10 @@ def show_users_list(user_db):
                     st.markdown(f"🏙️ **Mestá**: {cities_text}")
             
             with col3:
-                # Tlačidlo na zobrazenie/skrytie hesla
-                if st.session_state.show_passwords.get(password_key, False):
-                    if st.button("👁️‍🗨️ Skryť", key=f"hide_pass_{user_email}", help="Skryť heslo"):
-                        st.session_state.show_passwords[password_key] = False
-                        st.rerun()
-                else:
-                    if st.button("👁️ Heslo", key=f"show_pass_{user_email}", help="Zobraziť heslo"):
-                        st.session_state.verification_mode[verification_key] = True
-                        st.rerun()
+                # Tlačidlo na reset hesla
+                if st.button("� Reset hesla", key=f"reset_pass_{user_email}", help="Resetovať heslo používateľa"):
+                    st.session_state.verification_mode[f"reset_{user_email}"] = True
+                    st.rerun()
             
             with col4:
                 if user['email'] != "pvarhalik@sykora.eu":  # Nemôže zmazať seba
@@ -341,46 +329,74 @@ def show_users_list(user_db):
         
         st.markdown("---")
 
-def show_password_verification_form(user, password_key, verification_key, user_db):
-    """Zobrazí formulár pre overenie admin hesla"""
+def show_password_reset_form(user, reset_key, user_db):
+    """Zobrazí formulár pre reset hesla používateľa"""
     
     st.markdown("---")
-    st.warning(f"🔐 **Bezpečnostné overenie** pre zobrazenie hesla používateľa: **{user['name']}**")
+    st.warning(f"🔄 **Reset hesla** pre používateľa: **{user['name']}**")
     
-    with st.form(f"verify_admin_{user['email']}", clear_on_submit=True):
-        st.markdown("**Zadajte svoje admin heslo pre pokračovanie:**")
+    with st.form(f"reset_password_{user['email']}", clear_on_submit=True):
+        st.markdown("**Zadajte nové heslo pre používateľa:**")
+        
+        col_pass1, col_pass2 = st.columns(2)
+        
+        with col_pass1:
+            new_password = st.text_input(
+                "🔑 Nové heslo:", 
+                type="password",
+                help="Zadajte nové heslo pre používateľa"
+            )
+        
+        with col_pass2:
+            confirm_password = st.text_input(
+                "🔑 Potvrďte heslo:", 
+                type="password",
+                help="Zadajte heslo znovu pre potvrdenie"
+            )
+        
+        # Admin overenie
+        st.markdown("**Zadajte svoje admin heslo pre potvrdenie:**")
         admin_password = st.text_input(
             "🔑 Admin heslo:", 
             type="password",
             help="Zadajte heslo aktuálne prihláseného admin účtu"
         )
         
-        col_verify1, col_verify2 = st.columns(2)
+        col_reset1, col_reset2 = st.columns(2)
         
-        with col_verify1:
-            verify_submitted = st.form_submit_button("✅ Overiť a zobraziť", type="primary")
+        with col_reset1:
+            reset_submitted = st.form_submit_button("✅ Resetovať heslo", type="primary")
         
-        with col_verify2:
+        with col_reset2:
             cancel_submitted = st.form_submit_button("❌ Zrušiť")
         
         # Spracovanie formuláru
-        if verify_submitted and admin_password:
-            # Overenie admin hesla
-            current_user = st.session_state.get('authenticated_user')
-            if current_user and user_db.authenticate(current_user['email'], admin_password):
-                st.session_state.show_passwords[password_key] = True
-                st.session_state.verification_mode[verification_key] = False
-                st.success(f"✅ Admin overený! Heslo pre {user['name']} bude zobrazené.")
-                st.rerun()
+        if reset_submitted:
+            if not new_password or not confirm_password or not admin_password:
+                st.error("⚠️ Vyplňte všetky polia!")
+            elif new_password != confirm_password:
+                st.error("❌ Heslá sa nezhodujú!")
+            elif len(new_password) < 4:
+                st.error("⚠️ Heslo musí mať aspoň 4 znaky!")
             else:
-                st.error("❌ Nesprávne admin heslo!")
-        
-        elif verify_submitted and not admin_password:
-            st.error("⚠️ Zadajte admin heslo!")
+                # Overenie admin hesla
+                current_user = st.session_state.get('authenticated_user')
+                if current_user and user_db.authenticate(current_user['email'], admin_password):
+                    # Reset hesla
+                    if user_db.reset_user_password(user['email'], new_password):
+                        st.session_state.verification_mode[reset_key] = False
+                        st.success(f"✅ Heslo pre {user['name']} bolo úspešne resetované!")
+                        st.info(f"🔐 **Nové heslo**: `{new_password}`")
+                        st.caption("⚠️ Nezabudnite oznámiť používateľovi nové heslo!")
+                        st.rerun()
+                    else:
+                        st.error("❌ Chyba pri resetovaní hesla!")
+                else:
+                    st.error("❌ Nesprávne admin heslo!")
         
         elif cancel_submitted:
-            st.session_state.verification_mode[verification_key] = False
-            st.info("🚫 Zobrazenie hesla zrušené")
+            st.session_state.verification_mode[reset_key] = False
+            st.info("🚫 Reset hesla zrušený")
             st.rerun()
     
     st.markdown("---")

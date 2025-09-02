@@ -11,6 +11,7 @@ class UserDatabase:
         self.users = self.load_users()
         self.ensure_admin_exists()
     
+    
     def load_users(self) -> Dict:
         """Načíta používateľov zo súboru"""
         if os.path.exists(self.db_file):
@@ -44,7 +45,6 @@ class UserDatabase:
         if admin_email not in self.users:
             self.users[admin_email] = {
                 "password_hash": self.hash_password(admin_password),
-                "password_plain": admin_password,  # Pre admin prístup
                 "role": "admin",
                 "cities": ["all"],  # Admin vidí všetky mestá
                 "name": "Peter Varhalik",
@@ -64,12 +64,7 @@ class UserDatabase:
                     "employee_detail_product_table": True,
                     "all_features": True
                 }
-            
-            # Zabezpečí plain text heslo pre admina
-            if "password_plain" not in self.users[admin_email]:
-                self.users[admin_email]["password_plain"] = admin_password
-                
-            self.save_users()
+                self.save_users()
     
     def authenticate(self, email: str, password: str) -> Optional[Dict]:
         """Overí prihlásenie používateľa"""
@@ -110,7 +105,6 @@ class UserDatabase:
         
         self.users[email] = {
             "password_hash": self.hash_password(password),
-            "password_plain": password,  # Pre admin prístup (🔒 zabezpečené)
             "role": role,
             "cities": cities,
             "name": name,
@@ -119,21 +113,17 @@ class UserDatabase:
         
         return self.save_users()
     
-    def get_raw_password(self, email: str) -> Optional[str]:
-        """Získa plain text heslo (iba pre admin účely)"""
+    def reset_user_password(self, email: str, new_password: str) -> bool:
+        """Resetuje heslo používateľa (iba admin)"""
         if email not in self.users:
-            return None
+            return False
         
-        # Vráti plain text heslo ak existuje
-        return self.users[email].get("password_plain", "[Nedostupné - starý záznam]")
+        self.users[email]["password_hash"] = self.hash_password(new_password)
+        return self.save_users()
     
-    def ensure_admin_has_plain_password(self):
-        """Zabezpečí, že admin má plain text heslo"""
-        admin_email = "pvarhalik@sykora.eu"
-        if admin_email in self.users and "password_plain" not in self.users[admin_email]:
-            # Ak admin nemá plain text heslo, pridaj default
-            self.users[admin_email]["password_plain"] = "01011970"
-            self.save_users()
+    def get_raw_password(self, email: str) -> Optional[str]:
+        """Pre bezpečnosť - nevráti plain text heslo"""
+        return "[Heslo nie je dostupné - použite reset hesla]"
     
     def update_user(self, email: str, **kwargs) -> bool:
         """Aktualizuje používateľa"""
@@ -143,7 +133,7 @@ class UserDatabase:
         if "password" in kwargs:
             plain_password = kwargs.pop("password")
             kwargs["password_hash"] = self.hash_password(plain_password)
-            kwargs["password_plain"] = plain_password  # Uloží aj plain text
+            # Neukládame plain text heslo
         
         self.users[email].update(kwargs)
         self.save_users()
