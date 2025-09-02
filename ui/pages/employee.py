@@ -36,11 +36,47 @@ def calculate_employee_daily_averages(analyzer, employee_name, data_type='intern
 def render(analyzer, selected_employee):
     """Nový detailný view zamestnanca s PROFESIONÁLNYMI grafmi"""
     
+    # ✅ BEZPEČNOSTNÁ KONTROLA - overenie oprávnení k zamestnancovi
+    from auth.auth import can_access_city, get_current_user
+    
+    # Najprv získaj údaje o zamestnancovi
+    employee_data = None
+    for emp in analyzer.sales_employees:
+        if emp.get('name') == selected_employee:
+            employee_data = emp
+            break
+    
+    if not employee_data:
+        st.error(f"❌ Zamestnanec '{selected_employee}' nebol nájdený!")
+        return
+    
+    # Kontrola oprávnení k mestu zamestnanca
+    employee_workplace = employee_data.get('workplace', 'unknown')
+    current_user = get_current_user()
+    
+    if not current_user:
+        st.error("❌ Nie ste prihlásený")
+        return
+    
+    if not can_access_city(employee_workplace):
+        st.error(f"❌ Nemáte oprávnenie pristúpiť k zamestnancovi z mesta: {employee_workplace.title()}")
+        st.warning("🔒 Kontaktujte administrátora pre rozšírenie oprávnení")
+        st.info(f"👤 Vaše oprávnené mestá: {', '.join(current_user.get('cities', []))}")
+        
+        # Tlačidlo späť na overview
+        if st.button("⬅️ Späť na prehľad"):
+            st.session_state.current_page = 'overview'
+            st.session_state.selected_employee = None
+            st.rerun()
+        return
+    
     # 🔍 DEBUG INFO (dočasne zobrazené)
     with st.expander("🔧 Debug informácie", expanded=False):
         st.write(f"🔍 DEBUG: selected_employee = '{selected_employee}'")
         st.write(f"🔍 DEBUG: analyzer má {len(analyzer.sales_employees)} zamestnancov")
         st.write(f"🔍 DEBUG: Prvých 5 mien: {[emp.get('name') for emp in analyzer.sales_employees[:5]]}")
+        st.write(f"🔍 DEBUG: Workplace = '{employee_workplace}'")
+        st.write(f"🔍 DEBUG: User cities = {current_user.get('cities', [])}")
     
     # ✨ PROFESIONÁLNY HEADER
     st.markdown(f"""
@@ -74,12 +110,7 @@ def render(analyzer, selected_employee):
     </div>
     """, unsafe_allow_html=True)
     
-    # ✅ ZÍSKANIE SKUTOČNÝCH DÁT Z ANALYZÁTORA
-    employee_data = None
-    for emp in analyzer.sales_employees:
-        if emp.get('name') == selected_employee:
-            employee_data = emp
-            break
+    # ✅ ZÍSKANIE SKUTOČNÝCH DÁT Z ANALYZÁTORA (už máme employee_data)
     
     if not employee_data:
         st.error(f"❌ Zamestnanec '{selected_employee}' nebol nájdený!")

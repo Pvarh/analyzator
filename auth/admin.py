@@ -11,6 +11,31 @@ import plotly.express as px
 from auth.users_db import UserDatabase
 from auth.auth import get_current_user, is_admin, get_activity_stats, get_user_activity_stats
 from core.server_monitor import get_server_monitor
+import re
+
+
+def validate_email(email):
+    """Validuje email adresu a odstráni prípadné medzery"""
+    if not email:
+        return None, "Email je povinný"
+    
+    # Odstráň medzery na začiatku a konci
+    email = email.strip()
+    
+    # Skontroluj či neobsahuje medzery vo vnútri
+    if ' ' in email:
+        return None, "Email nesmie obsahovať medzery"
+    
+    # Základná regex validácia emailu
+    email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if not re.match(email_pattern, email):
+        return None, "Neplatný formát emailu"
+    
+    # Kontrola domény
+    if not (email.endswith("@sykora.eu") or email.endswith("@sykorahome.cz")):
+        return None, "Email musí končiť na @sykora.eu alebo @sykorahome.cz"
+    
+    return email, None
 
 
 def calculate_24h_changes(current_metrics, historical_data):
@@ -252,26 +277,90 @@ def show_add_user_form(user_db):
         submitted = st.form_submit_button("➕ Pridať používateľa", width='stretch', type="primary")
         
         if submitted:
+            # Validácia emailu
+            validated_email, email_error = validate_email(email)
+            
             if not all([name, email, password]):
                 st.error("❌ Všetky polia sú povinné!")
-            elif not (email.endswith("@sykora.eu") or email.endswith("@sykorahome.cz")):
-                st.error("❌ Email musí končiť na @sykora.eu alebo @sykorahome.cz")
+            elif email_error:
+                st.error(f"❌ {email_error}")
             elif role == "manager" and not cities:
                 st.error("❌ Pre manažéra musíte vybrať aspoň jedno mesto!")
+            elif len(password) < 4:
+                st.error("❌ Heslo musí mať aspoň 4 znaky!")
             else:
                 try:
-                    success = user_db.add_user(email, password, role, cities, name)
+                    # Použijem validovaný email (s odstránenými medzerami)
+                    success = user_db.add_user(validated_email, password, role, cities, name)
                     if success:
                         st.success(f"✅ Používateľ {name} bol úspešne pridaný!")
+                        st.info(f"📧 Email: {validated_email}")
                         st.rerun()
                     else:
-                        st.error("❌ Používateľ sa nepodarilo pridať - možno už existuje alebo problém s oprávneniami súboru")
+                        st.error("❌ Používateľ sa nepodarilo pridať - možno už existuje")
                 except Exception as e:
                     st.error(f"❌ Chyba pri pridávaní používateľa: {e}")
+
+def fix_database_emails(user_db):
+    """Opraví problematické emaily s medzerami v databáze"""
+    st.subheader("🔧 Oprava databázy")
+    
+    # Načítaj raw databázu pre kontrolu
+    import json
+    import os
+    
+    db_file = os.path.join(os.path.dirname(__file__), 'users.json')
+    
+    if not os.path.exists(db_file):
+        st.error("❌ Databáza neexistuje")
+        return
+    
+    try:
+        with open(db_file, 'r', encoding='utf-8') as f:
+            raw_users = json.load(f)
+        
+        # Nájdi problematické emaily
+        problematic_emails = []
+        for email in raw_users.keys():
+            if email.startswith(' ') or email.endswith(' ') or '  ' in email:
+                problematic_emails.append(email)
+        
+        if not problematic_emails:
+            st.success("✅ V databáze neboli nájdené problematické emaily")
+            return
+        
+        st.warning(f"⚠️ Nájdené problematické emaily: {len(problematic_emails)}")
+        
+        for email in problematic_emails:
+            st.code(f"Problém: '{email}' -> '{email.strip()}'")
+        
+        if st.button("🔧 Opraviť všetky problematické emaily", type="primary"):
+            fixed_users = {}
+            
+            for email, user_data in raw_users.items():
+                clean_email = email.strip()
+                fixed_users[clean_email] = user_data
+            
+            # Ulož opravenou databázu
+            with open(db_file, 'w', encoding='utf-8') as f:
+                json.dump(fixed_users, f, indent=2, ensure_ascii=False)
+            
+            st.success("✅ Databáza bola opravená!")
+            st.info("🔄 Reštartujte aplikáciu pre aplikovanie zmien")
+            
+    except Exception as e:
+        st.error(f"❌ Chyba pri oprave databázy: {e}")
+
 
 def show_users_list(user_db):
     """Zoznam všetkých používateľov s možnosťou zobraziť heslá"""
     st.subheader("📋 Zoznam používateľov")
+    
+    # Pridaj nástroj na opravu databázy
+    with st.expander("🔧 Nástroje pre opravu databázy"):
+        fix_database_emails(user_db)
+    
+    st.divider()
     
     users = user_db.get_all_users()
     

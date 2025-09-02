@@ -1065,9 +1065,16 @@ def create_employee_button_in_column(emp, analyzer, index, prefix):
              f"💻 SketchUp: {metrics.get('sketchup', {}).get('value', 0):.0f}% " + 
              f"({'Nepoužíva' if metrics.get('sketchup', {}).get('value', 0) >= 80 else 'Používa často'})"
     ):
-        st.session_state.selected_employee = name
-        st.session_state.current_page = 'employee'
-        st.rerun()
+        # ✅ BEZPEČNOSTNÁ KONTROLA - overenie oprávnení k mestu
+        from auth.auth import can_access_city
+        
+        if can_access_city(workplace):
+            st.session_state.selected_employee = name
+            st.session_state.current_page = 'employee'
+            st.rerun()
+        else:
+            st.error(f"❌ Nemáte oprávnenie pristúpiť k zamestnancovi z mesta: {workplace.title()}")
+            st.warning("🔒 Kontaktujte administrátora pre rozšírenie oprávnení")
 
 def find_correct_sales_data(employee_name, emp, analyzer):
     """Automaticky nájde správne sales dáta zo všetkých zdrojov"""
@@ -1199,13 +1206,34 @@ def find_original_overall_score(employee_name, analyzer):
     return 50
 
 def show_cities_detailed_overview(analyzer):
-    """Detailný prehľad podľa miest"""
+    """Detailný prehľad podľa miest - iba pre povolené mestá"""
+    from auth.auth import get_current_user, can_access_city
+    
     create_section_header("Detailný prehľad podľa miest", "🏢")
     
-    # Implementácia detailného prehľadu miest
+    current_user = get_current_user()
+    if not current_user:
+        st.error("❌ Nie ste prihlásený")
+        return
+    
+    # Zoznam všetkých miest
+    all_cities = ['praha', 'brno', 'zlin', 'vizovice']
+    
+    # Filtrovanie miest podľa oprávnení používateľa
+    if current_user.get('role') == 'admin':
+        allowed_cities = all_cities  # Admin vidí všetko
+    else:
+        user_cities = current_user.get('cities', [])
+        allowed_cities = [city for city in all_cities if can_access_city(city)]
+    
+    if not allowed_cities:
+        st.warning("⚠️ Nemáte oprávnenie na zobrazenie žiadnych miest")
+        return
+    
+    # Implementácia detailného prehľadu iba pre povolené mestá
     cities_data = {}
     
-    for workplace in ['praha', 'brno', 'zlin', 'vizovice']:
+    for workplace in allowed_cities:
         city_employees = analyzer.get_employees_by_workplace(workplace)
         if city_employees:
             total_sales = sum([emp.get('total_sales', 0) for emp in city_employees])
@@ -1214,6 +1242,10 @@ def show_cities_detailed_overview(analyzer):
                 'count': len(city_employees),
                 'total_sales': total_sales
             }
+    
+    if not cities_data:
+        st.info("ℹ️ Žiadne dáta pre vaše oprávnené mestá")
+        return
     
     for workplace, data in cities_data.items():
         with st.expander(f"🏢 {workplace.upper()} ({data['count']} zaměstnanců)", expanded=False):

@@ -95,8 +95,15 @@ class UserDatabase:
     
     def add_user(self, email: str, password: str, role: str, cities: List[str], name: str) -> bool:
         """Pridá nového používateľa"""
+        # Čistenie emailu od medzier
+        email = email.strip() if email else ""
+        
         # Validácie
         if not email or not (email.endswith("@sykora.eu") or email.endswith("@sykorahome.cz")):
+            return False
+        
+        # Kontrola či email neobsahuje medzery vo vnútri
+        if ' ' in email:
             return False
         
         if not password or len(password) < 1:
