@@ -4,7 +4,7 @@ import pandas as pd
 import psutil
 import time
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 import shutil
 import plotly.graph_objects as go
 import plotly.express as px
@@ -268,20 +268,52 @@ def show_error_logs():
         st.info("💡 Skontrolujte či existuje súbor logs/errors.json")
 
 def show_activity_logs():
-    """Zobrazí activity logy manažérov"""
+    """Zobrazí activity logy manažérov s možnosťou výberu dátumového rozsahu"""
     st.subheader("📊 Activity Logs - Aktivita manažérov")
     
-    # Výber dátumu
-    selected_date = st.date_input("📅 Vyberte dátum:", datetime.now())
-    date_str = selected_date.strftime("%Y-%m-%d")
+    # Výber typu zobrazenia
+    view_mode = st.radio(
+        "📊 Typ zobrazenia:",
+        ["Jeden deň", "Dátumový rozsah"],
+        horizontal=True
+    )
     
-    # Získanie štatistík
-    stats = get_activity_stats(date_str)
-    
-    if stats.get('total_visits', 0) == 0:
-        st.info(f"📊 Žiadna aktivita zaznamenaná pre {date_str}")
-        st.info("💡 Aktivita sa zaznamenáva len keď sa používatelia prihlasia a používajú aplikáciu")
-        return
+    if view_mode == "Jeden deň":
+        # Pôvodná funkcionalita - jeden deň
+        selected_date = st.date_input("📅 Vyberte dátum:", datetime.now())
+        date_str = selected_date.strftime("%Y-%m-%d")
+        
+        # Získanie štatistík pre jeden deň
+        stats = get_activity_stats(date_str)
+        
+        if stats.get('total_visits', 0) == 0:
+            st.info(f"📊 Žiadna aktivita zaznamenaná pre {date_str}")
+            st.info("💡 Aktivita sa zaznamenáva len keď sa používatelia prihlasia a používajú aplikáciu")
+            return
+        
+        show_single_day_stats(stats, date_str)
+        
+    else:
+        # Nová funkcionalita - dátumový rozsah
+        col_from, col_to = st.columns(2)
+        
+        with col_from:
+            from_date = st.date_input("📅 Od dátumu:", datetime.now() - timedelta(days=7))
+        
+        with col_to:
+            to_date = st.date_input("📅 Do dátumu:", datetime.now())
+        
+        if from_date > to_date:
+            st.error("❌ 'Od dátumu' nemôže byť neskôr ako 'Do dátumu'")
+            return
+        
+        # Tlačidlo na načítanie
+        if st.button("📊 Načítať aktivitu za obdobie", type="primary"):
+            show_date_range_stats(from_date, to_date)
+
+
+def show_single_day_stats(stats, date_str):
+    """Zobrazí štatistiky pre jeden deň"""
     
     # Prehľad štatistík
     st.markdown("### 📈 Prehľad aktivity")
@@ -352,6 +384,193 @@ def show_activity_logs():
         users_df = pd.DataFrame(users_data)
         users_df = users_df.sort_values('Návštevy', ascending=False)
         st.dataframe(users_df, width='stretch', hide_index=True)
+
+
+def show_date_range_stats(from_date, to_date):
+    """Zobrazí štatistiky pre dátumový rozsah"""
+    from datetime import date, timedelta
+    import json
+    
+    # Načítanie dát pre všetky dni v rozsahu
+    current_date = from_date
+    total_stats = {
+        'total_visits': 0,
+        'unique_users': set(),
+        'pages': {},
+        'users': {},
+        'daily_data': []
+    }
+    
+    # Prechádzame každý deň v rozsahu
+    while current_date <= to_date:
+        date_str = current_date.strftime("%Y-%m-%d")
+        daily_stats = get_activity_stats(date_str)
+        
+        # Ak existujú dáta pre tento deň
+        if daily_stats.get('total_visits', 0) > 0:
+            # Spočítaj celkové návštevy
+            total_stats['total_visits'] += daily_stats['total_visits']
+            
+            # Pridaj používateľov do setu
+            if daily_stats.get('users'):
+                for email in daily_stats['users'].keys():
+                    total_stats['unique_users'].add(email)
+            
+            # Agreguj stránky
+            if daily_stats.get('pages'):
+                for page, visits in daily_stats['pages'].items():
+                    total_stats['pages'][page] = total_stats['pages'].get(page, 0) + visits
+            
+            # Agreguj používateľov
+            if daily_stats.get('users'):
+                for email, user_data in daily_stats['users'].items():
+                    if email not in total_stats['users']:
+                        total_stats['users'][email] = {
+                            'name': user_data['name'],
+                            'role': user_data.get('role', 'manager'),
+                            'visits': 0,
+                            'pages': []
+                        }
+                    total_stats['users'][email]['visits'] += user_data['visits']
+                    total_stats['users'][email]['pages'].extend(user_data['pages'])
+            
+            # Pridaj denné dáta pre graf
+            total_stats['daily_data'].append({
+                'date': current_date,
+                'visits': daily_stats['total_visits'],
+                'unique_users': len(daily_stats.get('users', {}))
+            })
+        else:
+            # Pridaj aj prázdne dni pre graf
+            total_stats['daily_data'].append({
+                'date': current_date,
+                'visits': 0,
+                'unique_users': 0
+            })
+        
+        current_date += timedelta(days=1)
+    
+    # Konvertuj set na číslo
+    total_stats['unique_users'] = len(total_stats['unique_users'])
+    
+    # Zobrazenie výsledkov
+    if total_stats['total_visits'] == 0:
+        st.info(f"📊 Žiadna aktivita zaznamenaná v období od {from_date} do {to_date}")
+        return
+    
+    # Základné štatistiky
+    st.markdown("### 📈 Celkový prehľad")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("📊 Celkom návštev", total_stats['total_visits'])
+    
+    with col2:
+        st.metric("👥 Jedinečných používateľov", total_stats['unique_users'])
+    
+    with col3:
+        days_count = (to_date - from_date).days + 1
+        st.metric("📅 Dní v rozsahu", days_count)
+    
+    with col4:
+        avg_visits = total_stats['total_visits'] / days_count if days_count > 0 else 0
+        st.metric("📈 Priemerné návštevy/deň", f"{avg_visits:.1f}")
+    
+    # Graf dennej aktivity
+    if total_stats['daily_data']:
+        st.markdown("---")
+        st.markdown("### 📊 Denná aktivita")
+        
+        # Príprava dát pre graf
+        dates = [d['date'] for d in total_stats['daily_data']]
+        visits = [d['visits'] for d in total_stats['daily_data']]
+        unique_users = [d['unique_users'] for d in total_stats['daily_data']]
+        
+        # Vytvorenie grafu
+        fig = go.Figure()
+        
+        fig.add_trace(go.Scatter(
+            x=dates,
+            y=visits,
+            mode='lines+markers',
+            name='Návštevy',
+            line=dict(color='#1f77b4', width=3),
+            marker=dict(size=6)
+        ))
+        
+        fig.add_trace(go.Scatter(
+            x=dates,
+            y=unique_users,
+            mode='lines+markers',
+            name='Jedineční používatelia',
+            line=dict(color='#ff7f0e', width=3),
+            marker=dict(size=6),
+            yaxis='y2'
+        ))
+        
+        fig.update_layout(
+            title='Denná aktivita používateľov',
+            xaxis_title='Dátum',
+            yaxis_title='Počet návštev',
+            yaxis2=dict(
+                title='Jedineční používatelia',
+                overlaying='y',
+                side='right'
+            ),
+            height=400,
+            showlegend=True
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
+    
+    # Detail po stránkach
+    if total_stats['pages']:
+        st.markdown("---")
+        st.markdown("### 📊 Aktivita po stránkach (celkovo)")
+        
+        pages_data = []
+        for page, visits in total_stats['pages'].items():
+            page_names = {
+                'overview': '📊 Prehľad',
+                'employee': '👤 Zamestnanec',
+                'heatmap': '🗺️ Heatmapa', 
+                'benchmark': '📈 Benchmark',
+                'studio': '🏢 Studio',
+                'employee_detail': '👤 Detail zamestnanca',
+                'admin': '👑 Admin Panel'
+            }
+            page_display = page_names.get(page, page)
+            pages_data.append({
+                'Stránka': page_display,
+                'Návštevy': visits,
+                'Percentá': f"{(visits/total_stats['total_visits']*100):.1f}%"
+            })
+        
+        pages_df = pd.DataFrame(pages_data)
+        pages_df = pages_df.sort_values('Návštevy', ascending=False)
+        st.dataframe(pages_df, use_container_width=True)
+    
+    # Detail používateľov
+    if total_stats['users']:
+        st.markdown("---")
+        st.markdown("### 👥 Aktivita používateľov (celkovo)")
+        
+        users_data = []
+        for email, user_info in total_stats['users'].items():
+            unique_pages = len(set(user_info['pages']))
+            users_data.append({
+                'Používateľ': user_info['name'],
+                'Email': email,
+                'Role': user_info.get('role', 'manager'),
+                'Návštevy': user_info['visits'],
+                'Unikátne stránky': unique_pages
+            })
+        
+        users_df = pd.DataFrame(users_data)
+        users_df = users_df.sort_values('Návštevy', ascending=False)
+        st.dataframe(users_df, use_container_width=True)
+
 
 def show_add_user_form(user_db):
     """Formulár na pridanie nového používateľa"""
