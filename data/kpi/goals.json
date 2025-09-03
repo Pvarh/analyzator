@@ -1,0 +1,29 @@
+{
+  "global_targets": {
+    "2025": {
+      "q1": {
+        "sales": 2000000,
+        "activity_score": 80
+      },
+      "q2": {
+        "sales": 2500000,
+        "activity_score": 85
+      },
+      "q3": {
+        "sales": 2200000,
+        "activity_score": 85
+      },
+      "q4": {
+        "sales": 3000000,
+        "activity_score": 90
+      }
+    }
+  },
+  "individual_targets": {},
+  "city_multipliers": {
+    "praha": 1.0,
+    "brno": 0.8,
+    "ostrava": 0.7,
+    "bratislava": 1.2
+  }
+}

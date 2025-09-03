@@ -1,0 +1,60 @@
+{
+  "active_metrics": {
+    "sales": {
+      "name": "Predaj",
+      "weight": 70,
+      "unit": "Kč",
+      "data_source": "excel",
+      "enabled": true,
+      "icon": "💰"
+    },
+    "activity": {
+      "name": "Aktivita v systéme",
+      "weight": 20,
+      "unit": "body",
+      "data_source": "internal",
+      "enabled": true,
+      "icon": "📊"
+    },
+    "efficiency": {
+      "name": "Efektivita",
+      "weight": 10,
+      "unit": "%",
+      "data_source": "external",
+      "enabled": false,
+      "icon": "⚡",
+      "note": "Pripravené na budúce napojenie"
+    },
+    "customer_satisfaction": {
+      "name": "Spokojnosť klientov",
+      "weight": 0,
+      "unit": "body",
+      "data_source": "external",
+      "enabled": false,
+      "icon": "😊",
+      "note": "Pripravené na budúce napojenie"
+    }
+  },
+  "scoring": {
+    "excellent": {
+      "min": 90,
+      "color": "#28a745",
+      "emoji": "🏆"
+    },
+    "good": {
+      "min": 75,
+      "color": "#ffc107",
+      "emoji": "🥉"
+    },
+    "average": {
+      "min": 50,
+      "color": "#17a2b8",
+      "emoji": "⚠️"
+    },
+    "poor": {
+      "min": 0,
+      "color": "#dc3545",
+      "emoji": "❌"
+    }
+  }
+}

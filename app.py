@@ -637,6 +637,12 @@ def create_sidebar():
                 st.session_state.selected_employee = None
                 st.rerun()
             
+            if st.button("🎯 KPI Systém", width='stretch',
+                        type="primary" if current_page == 'kpi_system' else "secondary"):
+                st.session_state.current_page = 'kpi_system'
+                st.session_state.selected_employee = None
+                st.rerun()
+            
             # ✅ Admin tlačidlo (iba pre adminov)
             if is_admin():
                 if st.button("👑 Administrácia", width='stretch',
@@ -826,6 +832,11 @@ def run_main_application():
         elif st.session_state.current_page == 'studio':
             log_page_activity('studio')
             studio.render(analyzer)
+            
+        elif st.session_state.current_page == 'kpi_system':
+            log_page_activity('kpi_system')
+            from ui.pages import kpi_system
+            kpi_system.render()
 
         elif st.session_state.current_page == 'employee_detail':
             log_page_activity('employee_detail')
