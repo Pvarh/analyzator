@@ -165,12 +165,16 @@ class KPIManager:
         except Exception as e:
             return {"error": f"Chyba pri načítavaní KPI: {e}"}
     
-    def get_city_kpis(self, city: str, period: str = "current") -> List[Dict]:
+    def get_city_kpis(self, city: str, period: str = "current", analyzer=None) -> List[Dict]:
         """Získa KPI pre všetkých zamestnancov z daného mesta"""
         try:
-            # Načítaj dáta zamestnancov z analyzéra
-            from core.analyzer import Analyzer
-            analyzer = Analyzer()
+            # Ak nemáme analyzer, skús ho získať zo session state alebo vráť prázdne dáta
+            if analyzer is None:
+                import streamlit as st
+                if 'analyzer' in st.session_state:
+                    analyzer = st.session_state.analyzer
+                else:
+                    return [{"error": "Analyzer nie je dostupný"}]
             
             # Získaj zamestnancov z mesta
             city_employees = []
@@ -387,10 +391,10 @@ class KPIManager:
         
         self.save_goals(goals)
     
-    def get_team_overview(self, city: str = None) -> Dict:
+    def get_team_overview(self, city: str = None, analyzer=None) -> Dict:
         """Získa prehľad tímu/mesta"""
         try:
-            city_kpis = self.get_city_kpis(city) if city else []
+            city_kpis = self.get_city_kpis(city, analyzer=analyzer) if city else []
             
             if not city_kpis:
                 return {'error': 'Žiadne dáta'}

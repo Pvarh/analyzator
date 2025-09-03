@@ -134,8 +134,11 @@ def render_admin_overview(kpi_manager: KPIManager):
     st.markdown("### 🌍 Globálny prehľad")
     
     # Výber mesta pre detail
-    from core.analyzer import Analyzer
-    analyzer = Analyzer()
+    analyzer = st.session_state.get('analyzer')
+    if not analyzer:
+        st.error("❌ Analyzer nie je dostupný")
+        return
+        
     all_employees = analyzer.get_all_employees_summary()
     
     cities = list(set([emp.get('workplace', 'unknown').lower() for emp in all_employees]))
@@ -148,13 +151,13 @@ def render_admin_overview(kpi_manager: KPIManager):
     
     if selected_city == "Všetky":
         # Celkový prehľad
-        render_global_metrics(kpi_manager, cities)
+        render_global_metrics(kpi_manager, cities, analyzer)
     else:
         # Konkrétne mesto
-        render_city_detail(kpi_manager, selected_city.lower())
+        render_city_detail(kpi_manager, selected_city.lower(), analyzer)
 
 
-def render_global_metrics(kpi_manager: KPIManager, cities):
+def render_global_metrics(kpi_manager: KPIManager, cities, analyzer):
     """Globálne metriky všetkých miest"""
     
     col1, col2, col3, col4 = st.columns(4)
@@ -164,7 +167,7 @@ def render_global_metrics(kpi_manager: KPIManager, cities):
     avg_scores = []
     
     for city in cities:
-        team_overview = kpi_manager.get_team_overview(city)
+        team_overview = kpi_manager.get_team_overview(city, analyzer)
         if 'error' not in team_overview:
             total_employees += team_overview.get('total_employees', 0)
             total_excellent += team_overview.get('excellent_performers', 0)
@@ -188,17 +191,17 @@ def render_global_metrics(kpi_manager: KPIManager, cities):
     # Graf porovnania miest
     if cities:
         st.markdown("---")
-        render_cities_comparison_chart(kpi_manager, cities)
+        render_cities_comparison_chart(kpi_manager, cities, analyzer)
 
 
-def render_cities_comparison_chart(kpi_manager: KPIManager, cities):
+def render_cities_comparison_chart(kpi_manager: KPIManager, cities, analyzer):
     """Graf porovnania miest"""
     
     st.markdown("### 🏙️ Porovnanie miest")
     
     city_data = []
     for city in cities:
-        team_overview = kpi_manager.get_team_overview(city)
+        team_overview = kpi_manager.get_team_overview(city, analyzer)
         if 'error' not in team_overview:
             city_data.append({
                 'Mesto': city.title(),
@@ -235,12 +238,12 @@ def render_cities_comparison_chart(kpi_manager: KPIManager, cities):
             st.plotly_chart(fig_scatter, use_container_width=True)
 
 
-def render_city_detail(kpi_manager: KPIManager, city):
+def render_city_detail(kpi_manager: KPIManager, city, analyzer):
     """Detail konkrétneho mesta"""
     
     st.markdown(f"### 🏙️ Detail mesta: {city.title()}")
     
-    team_overview = kpi_manager.get_team_overview(city)
+    team_overview = kpi_manager.get_team_overview(city, analyzer)
     
     if 'error' in team_overview:
         st.error(f"❌ {team_overview['error']}")
@@ -437,7 +440,12 @@ def render_team_overview(kpi_manager: KPIManager, city):
     
     st.markdown(f"### 👥 Prehľad tímu - {city.title()}")
     
-    team_overview = kpi_manager.get_team_overview(city)
+    analyzer = st.session_state.get('analyzer')
+    if not analyzer:
+        st.error("❌ Analyzer nie je dostupný")
+        return
+    
+    team_overview = kpi_manager.get_team_overview(city, analyzer)
     
     if 'error' in team_overview:
         st.error(f"❌ {team_overview['error']}")
@@ -469,7 +477,12 @@ def render_team_analytics(kpi_manager: KPIManager, city):
     
     st.markdown(f"### 📈 Analytika tímu - {city.title()}")
     
-    team_overview = kpi_manager.get_team_overview(city)
+    analyzer = st.session_state.get('analyzer')
+    if not analyzer:
+        st.error("❌ Analyzer nie je dostupný")
+        return
+    
+    team_overview = kpi_manager.get_team_overview(city, analyzer)
     
     if 'error' in team_overview or not team_overview.get('employees'):
         st.info("📊 Nedostatok dát pre analýzu")
