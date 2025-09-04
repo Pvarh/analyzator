@@ -237,6 +237,20 @@ class UserDatabase:
         """Vráti dostupné mestá z dát"""
         return ["praha", "brno", "zlin", "vizovice"]
     
+    def delete_user(self, email: str) -> bool:
+        """Zmaže používateľa z databázy"""
+        if email not in self.users:
+            return False
+        
+        # Zabráň zmazaniu posledného admin účtu
+        if self.users[email].get("role") == "admin":
+            admin_count = sum(1 for user in self.users.values() if user.get("role") == "admin")
+            if admin_count <= 1:
+                raise ValueError("Nemôžete zmazať posledný admin účet!")
+        
+        del self.users[email]
+        return self.save_users()
+    
     def reset_database(self):
         """Resetuje databázu a vytvorí len admin účet"""
         self.users = {}

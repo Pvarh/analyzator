@@ -9,7 +9,7 @@ from core.analyzer import DataAnalyzer
 from core.utils import format_money, format_profit_value
 
 # Import UI stránok
-from ui.pages import overview, employee, heatmap, benchmark, studio, employee_detail
+from ui.pages import overview, employee, heatmap, benchmark, studio, employee_detail, user_management
 from ui.styling import apply_dark_theme
 
 # Import autentifikačného systému
@@ -653,6 +653,14 @@ def create_sidebar():
                     st.session_state.selected_employee = None
                     st.rerun()
             
+            # ✅ User Management tlačidlo (iba pre adminov)
+            if is_admin():
+                if st.button("👥 Správa používateľov", width='stretch',
+                            type="primary" if current_page == 'user_management' else "secondary"):
+                    st.session_state.current_page = 'user_management'
+                    st.session_state.selected_employee = None
+                    st.rerun()
+            
             # ✅ Admin tlačidlo (iba pre adminov s oprávnením)
             if is_admin() and 'admin' in allowed_pages:
                 if st.button("👑 Administrácia", width='stretch',
@@ -869,6 +877,10 @@ def run_main_application():
             log_page_activity('kpi_system')
             from ui.pages import kpi_system
             kpi_system.render()
+
+        elif st.session_state.current_page == 'user_management':
+            log_page_activity('user_management')
+            user_management.render()
 
         elif st.session_state.current_page == 'employee_detail':
             log_page_activity('employee_detail')
