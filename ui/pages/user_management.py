@@ -7,26 +7,30 @@ from auth.auth import get_current_user, is_admin
 
 def render():
     """Hlavná stránka pre správu používateľov"""
+    
+    # Tlačidlo späť na admin panel na vrchu stránky
+    col1, col2 = st.columns([1, 4])
+    with col1:
+        if st.button("⬅️ Späť na Admin Panel", type="secondary", use_container_width=True):
+            st.session_state.current_page = 'admin'
+            st.session_state.user_mgmt_mode = "overview"
+            st.session_state.selected_user_email = None
+            st.rerun()
+    
     st.title("👥 Správa používateľov")
     st.markdown("**Kompletné rozhranie pre správu všetkých používateľov systému**")
     
     # Kontrola admin oprávnení
     if not is_admin():
-        st.error("❌ Nemáte oprávnenie na tútu stránku!")
+        st.error("❌ Nemáte oprávnenie na túto stránku!")
         return
     
     user_db = UserDatabase()
     
-    # Minimálny sidebar - iba tlačidlo späť
+    # Minimálny sidebar
     with st.sidebar:
         st.markdown("### 👥 User Management")
-        
-        # Tlačidlo späť na admin panel
-        if st.button("⬅️ Späť na Admin Panel", use_container_width=True, type="secondary"):
-            st.session_state.current_page = 'admin'
-            st.session_state.user_mgmt_mode = "overview"
-            st.session_state.selected_user_email = None
-            st.rerun()
+        st.info("💡 Všetky funkcie sú dostupné na hlavnej stránke")
     
     # Hlavné rozhranie na stránke
     mode = st.session_state.get('user_mgmt_mode', 'overview')
