@@ -18,10 +18,10 @@ def load_studio_data_cached():
     """Cached version of studio data loading"""
     return load_studio_data()
 
-@st.cache_data(ttl=600)  # 10 min cache for heavy operations
-def create_analyzer_cached(data_hash):
-    """Cached analyzer creation"""
-    studio_data = load_studio_data()
+@st.cache_data
+def create_analyzer_cached(folder_hash):
+    """Cached analyzer creation - invalidated when studio folder changes"""
+    studio_data = load_studio_data(folder_hash)
     if studio_data is None:
         return None
     return StudioAnalyzer(studio_data)
@@ -31,6 +31,27 @@ def get_file_hash(file_path):
     try:
         stat = os.stat(file_path)
         return hashlib.md5(f"{file_path}:{stat.st_size}:{stat.st_mtime}".encode()).hexdigest()[:8]
+    except:
+        return "unknown"
+
+def get_studio_folder_hash():
+    """Hash celého data/studio priečinka pre cache invalidation"""
+    try:
+        studio_path = Path("data/studio")
+        if not studio_path.exists():
+            return "no_folder"
+        
+        # Získaj všetky Excel súbory a ich info
+        excel_files = list(studio_path.glob("*.xlsx")) + list(studio_path.glob("*.xls"))
+        
+        hash_info = []
+        for file_path in excel_files:
+            stat = os.stat(file_path)
+            hash_info.append(f"{file_path.name}:{stat.st_size}:{stat.st_mtime}")
+        
+        # Hash zoznam súborov + ich info
+        folder_content = "|".join(sorted(hash_info))
+        return hashlib.md5(folder_content.encode()).hexdigest()[:8]
     except:
         return "unknown"
 
@@ -47,20 +68,20 @@ def render(analyzer=None):
 def show_studio_page():
     apply_dark_theme()
     
+    # Získaj hash celého data/studio priečinka pre intelligent cache
+    folder_hash = get_studio_folder_hash()
+    
     # Automatické načítanie súborov z /data/studio/ - cached
-    studio_data = load_studio_data()
+    studio_data = load_studio_data(folder_hash)
     
     if studio_data is None:
         st.error("❌ Žiadne súbory nenájdené v priečinku /data/studio/")
         st.info("📁 Umiestnite Excel súbory s dátami o predaji do priečinka /data/studio/")
         return
     
-    # Create file hash for cache invalidation
-    file_hash = get_file_hash(studio_data) if studio_data else "empty"
-    
     try:
-        # Use cached analyzer creation
-        analyzer = create_analyzer_cached(file_hash)
+        # Use cached analyzer creation with folder hash
+        analyzer = create_analyzer_cached(folder_hash)
         if analyzer is None:
             raise Exception("Failed to create analyzer")
     except Exception as e:
@@ -70,6 +91,16 @@ def show_studio_page():
     if analyzer.df_active.empty:
         st.warning("⚠️ Žiadne relevantné dáta po filtrovaní!")
         return
+    
+    # Cache info a aktuálne dáta info
+    with st.expander("ℹ️ Informácie o dátach a cache", expanded=False):
+        col1, col2 = st.columns(2)
+        with col1:
+            st.info(f"📁 **Aktuálny súbor:** {Path(studio_data).name}")
+            st.info(f"📊 **Počet záznamov:** {len(analyzer.df_active):,}")
+        with col2:
+            st.info(f"🔄 **Cache hash:** `{folder_hash}`")
+            st.success("✅ **Cache stav:** Dáta sa automaticky aktualizujú pri zmene súborov")
     
     # ===== 🗓️ FILTER DÁTUMU =====
     st.subheader("📅 Filter dátumu")
@@ -212,8 +243,8 @@ def apply_date_filter(analyzer, start_date, end_date):
 # ---------------------------------------------------------------------------
 # AUTOMATICKÉ NAČÍTANIE DÁT Z /data/studio/
 # ---------------------------------------------------------------------------
-@st.cache_data(ttl=300)  # Cache file detection for 5 minutes
-def load_studio_data():
+@st.cache_data
+def load_studio_data(folder_hash):
     """Automaticky načíta prvý Excel súbor z /data/studio/ priečinka"""
     
     studio_path = Path("data/studio")
@@ -227,7 +258,8 @@ def load_studio_data():
     if not excel_files:
         return None
     
-    # Použij prvý nájdený súbor
+    # Použij prvý nájdený súbor (najnovší)
+    excel_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)  # Najnovší súbor prvý
     selected_file = excel_files[0]
     
     # Vráti cestu k súboru
