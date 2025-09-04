@@ -9,6 +9,30 @@ from ui.styling import (
     apply_dark_theme, create_section_header, create_subsection_header, 
     create_simple_metric_card, get_dark_plotly_layout
 )
+import hashlib
+import os
+
+# Simple performance enhancement
+@st.cache_data(ttl=300)  # 5 min cache
+def load_studio_data_cached():
+    """Cached version of studio data loading"""
+    return load_studio_data()
+
+@st.cache_data(ttl=600)  # 10 min cache for heavy operations
+def create_analyzer_cached(data_hash):
+    """Cached analyzer creation"""
+    studio_data = load_studio_data()
+    if studio_data is None:
+        return None
+    return StudioAnalyzer(studio_data)
+
+def get_file_hash(file_path):
+    """Simple file hash for cache invalidation"""
+    try:
+        stat = os.stat(file_path)
+        return hashlib.md5(f"{file_path}:{stat.st_size}:{stat.st_mtime}".encode()).hexdigest()[:8]
+    except:
+        return "unknown"
 
 # ---------------------------------------------------------------------------
 # RENDER FUNCTION FOR APP.PY
@@ -23,7 +47,7 @@ def render(analyzer=None):
 def show_studio_page():
     apply_dark_theme()
     
-    # Automatické načítanie súborov z /data/studio/
+    # Automatické načítanie súborov z /data/studio/ - cached
     studio_data = load_studio_data()
     
     if studio_data is None:
@@ -31,8 +55,14 @@ def show_studio_page():
         st.info("📁 Umiestnite Excel súbory s dátami o predaji do priečinka /data/studio/")
         return
     
+    # Create file hash for cache invalidation
+    file_hash = get_file_hash(studio_data) if studio_data else "empty"
+    
     try:
-        analyzer = StudioAnalyzer(studio_data)
+        # Use cached analyzer creation
+        analyzer = create_analyzer_cached(file_hash)
+        if analyzer is None:
+            raise Exception("Failed to create analyzer")
     except Exception as e:
         st.error(f"❌ Chyba pri načítaní dát: {e}")
         return
@@ -182,6 +212,7 @@ def apply_date_filter(analyzer, start_date, end_date):
 # ---------------------------------------------------------------------------
 # AUTOMATICKÉ NAČÍTANIE DÁT Z /data/studio/
 # ---------------------------------------------------------------------------
+@st.cache_data(ttl=300)  # Cache file detection for 5 minutes
 def load_studio_data():
     """Automaticky načíta prvý Excel súbor z /data/studio/ priečinka"""
     
@@ -387,6 +418,7 @@ def show_employees_filter_section(analyzer):
     
     return filter_type, appliance_filter, min_count
 
+@st.cache_data(ttl=300)  # 5 minút cache
 def get_filtered_employees(analyzer, filter_type, appliance_filter, min_count=0):
     """Vráti filtrovaných zamestnancov podľa kritérií + autentifikácie"""
     
