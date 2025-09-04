@@ -419,7 +419,7 @@ def show_employees_filter_section(analyzer):
     return filter_type, appliance_filter, min_count
 
 @st.cache_data(ttl=300)  # 5 minút cache
-def get_filtered_employees(analyzer, filter_type, appliance_filter, min_count=0):
+def get_filtered_employees(_analyzer, filter_type, appliance_filter, min_count=0):
     """Vráti filtrovaných zamestnancov podľa kritérií + autentifikácie"""
     
     # ✅ NOVÉ - Autentifikačné filtrovanie na začiatku
@@ -428,7 +428,7 @@ def get_filtered_employees(analyzer, filter_type, appliance_filter, min_count=0)
     
     # Pre administrátora bez filtrovania
     if current_user and current_user.get('role') == 'admin':
-        df_to_use = analyzer.df_active
+        df_to_use = _analyzer.df_active
     else:
         # Filtrovanie podľa miest používateľa
         if not user_cities:
@@ -437,13 +437,13 @@ def get_filtered_employees(analyzer, filter_type, appliance_filter, min_count=0)
         
         # Predpokladám že v dátach je stĺpec 'workplace' alebo podobný
         # Tu je potrebné prispôsobiť podľa štruktúry dát
-        if 'workplace' in analyzer.df_active.columns:
-            city_filter = analyzer.df_active['workplace'].str.lower().isin([c.lower() for c in user_cities])
-            df_to_use = analyzer.df_active[city_filter]
+        if 'workplace' in _analyzer.df_active.columns:
+            city_filter = _analyzer.df_active['workplace'].str.lower().isin([c.lower() for c in user_cities])
+            df_to_use = _analyzer.df_active[city_filter]
         else:
             # Ak nie je stĺpec workplace, použije všetky dáta
             # (môže byť potrebné upraviť podľa skutočnej štruktúry)
-            df_to_use = analyzer.df_active
+            df_to_use = _analyzer.df_active
     
     # Základné štatistiky zamestnancov podľa kategorií spotrebičov
     if appliance_filter == "Všetky kategórie":
@@ -511,7 +511,7 @@ def get_filtered_employees(analyzer, filter_type, appliance_filter, min_count=0)
     elif filter_type == "Nepredali vôbec":
         # Všetci zamestnanci, ktorí nepredali nič z danej kategórie
         if appliance_filter != "Všetky kategórie":
-            all_employees = analyzer.df_active['Kontaktní osoba-Jméno a příjmení'].unique()
+            all_employees = _analyzer.df_active['Kontaktní osoba-Jméno a příjmení'].unique()
             employees_with_sales = employee_stats['Kontaktní osoba-Jméno a příjmení'].unique()
             employees_without = [emp for emp in all_employees if emp not in employees_with_sales]
             
@@ -526,7 +526,7 @@ def get_filtered_employees(analyzer, filter_type, appliance_filter, min_count=0)
                     'Počet v kategórii': [0] * len(employees_without)
                 })
                 # Pridanie celkových štatistík
-                total_stats = analyzer.df_active.groupby('Kontaktní osoba-Jméno a příjmení').agg({
+                total_stats = _analyzer.df_active.groupby('Kontaktní osoba-Jméno a příjmení').agg({
                     'Cena/jedn.': 'sum',
                     'Název': 'count'
                 }).reindex(employees_without, fill_value=0)
