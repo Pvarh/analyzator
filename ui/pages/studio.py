@@ -640,6 +640,14 @@ def get_filtered_employees(_analyzer, filter_type, appliance_filter, min_count=0
         if 'workplace' in _analyzer.df_active.columns:
             unique_workplaces = _analyzer.df_active['workplace'].unique()
             st.write(f"**Unique workplaces:** {unique_workplaces}")
+        
+        # NOVÝ DEBUG - Kontaktné osoby
+        if 'Kontaktní osoba-Jméno a příjmení' in _analyzer.df_active.columns:
+            unique_contacts = _analyzer.df_active['Kontaktní osoba-Jméno a příjmení'].unique()
+            st.write(f"**Unique contacts in dataset:** {len(unique_contacts)} persons")
+            st.write(f"**First 10 contacts:** {unique_contacts[:10]}")
+        else:
+            st.write("**No contact column found!**")
     
     # Pre administrátora alebo používateľov s "studio_see_all_employees" bez filtrovania
     if (current_user and current_user.get('role') == 'admin') or has_feature_access("studio_see_all_employees"):
@@ -671,6 +679,9 @@ def get_filtered_employees(_analyzer, filter_type, appliance_filter, min_count=0
             'Cena/jedn.': ['sum', 'count', 'mean'],
             'Datum real.': ['min', 'max']
         }).round(0)
+        
+        # DEBUG: Info o groupby výsledku
+        st.info(f"📊 **After groupby:** {len(employee_stats)} unique employees from {len(df_to_use)} records")
         
         employee_stats.columns = ['Celkový predaj', 'Počet objednávok', 'Priemerná hodnota', 'Prvá objednávka', 'Posledná objednávka']
         employee_stats = employee_stats.reset_index()
