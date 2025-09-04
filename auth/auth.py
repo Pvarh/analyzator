@@ -258,8 +258,25 @@ def is_authenticated() -> bool:
     return st.session_state.get('authenticated_user') is not None
 
 def get_current_user() -> Optional[Dict]:
-    """Vráti aktuálneho prihláseného používateľa"""
-    return st.session_state.get('authenticated_user')
+    """Vráti aktuálneho prihláseného používateľa s fresh dátami z databázy"""
+    session_user = st.session_state.get('authenticated_user')
+    if not session_user:
+        return None
+    
+    # Načítaj fresh dáta z databázy aby sme mali aktuálne oprávnenia
+    email = session_user.get('email')
+    if email and 'user_db' in st.session_state:
+        try:
+            fresh_user_data = st.session_state.user_db.users.get(email)
+            if fresh_user_data and fresh_user_data.get('active', True):
+                # Zachovaj session info ale aktualizuj dáta z databázy
+                fresh_user_data['email'] = email
+                return fresh_user_data
+        except:
+            pass
+    
+    # Fallback na session dáta ak sa nedajú načítať fresh
+    return session_user
 
 def is_admin() -> bool:
     """Skontroluje či je aktuálny používateľ admin"""
