@@ -12,31 +12,57 @@
       "employee_detail_product_table": true,
       "all_features": true
     },
+    "password_plain": "01011970",
     "page_permissions": [
       "overview",
-      "employee", 
+      "employee",
       "benchmark",
-      "heatmap",
+      "heatmap", 
       "studio",
       "kpi_system",
       "admin"
     ]
   },
-  "jolsar@sykora.eu": {
-    "password_hash": "706c365cd1bbf18532229e10b246c5b7aa159342e3741c72d362de66b928d729",
+  "jivanic@sykorahome.cz": {
+    "password_hash": "4cb0e3a23010718bcafa8acefd087ecc4e2df0aa24098b991b4001c4f1d5b6c8",
     "role": "manager",
     "cities": [
-      "praha"
+      "brno"
     ],
-    "name": "Jirka Olsar",
+    "name": "Jakub Ivanič",
+    "active": true,
+    "page_permissions": [
+      "overview",
+      "employee",
+      "benchmark",
+      "heatmap",
+      "studio",
+      "kpi_system"
+    ]
+  },
+  "karel@sykora.eu": {
+    "password_hash": "305e037032b50846ecc68911d53edc87b838a53ebed33e7e7fe67d3e5f85f2b0",
+    "role": "manager",
+    "cities": [
+      "praha",
+      "brno",
+      "zlin",
+      "vizovice"
+    ],
+    "name": "Karel Sykora",
     "active": true,
     "features": {
-      "employee_detail_top_products": false,
-      "employee_detail_product_table": false,
-      "sidebar_company_statistics": false
+      "employee_detail_top_products": true,
+      "employee_detail_product_table": true,
+      "sidebar_company_statistics": true
     },
     "page_permissions": [
-      "studio"
+      "overview", 
+      "employee",
+      "benchmark",
+      "heatmap",
+      "studio",
+      "kpi_system"
     ]
   }
 }
