@@ -17,7 +17,7 @@
       "overview",
       "employee",
       "benchmark",
-      "heatmap", 
+      "heatmap",
       "studio",
       "kpi_system",
       "admin",
@@ -62,12 +62,30 @@
       "studio_see_all_employees": true
     },
     "page_permissions": [
-      "overview", 
+      "overview",
       "employee",
       "benchmark",
       "heatmap",
       "studio",
       "kpi_system"
     ]
+  },
+  "jdrhlik@sykora.eu": {
+    "password_hash": "82c12eaee2089404111180a943bec518e161c887d5a7b028de93db3088aac4fc",
+    "role": "manager",
+    "cities": [
+      "vizovice"
+    ],
+    "name": "Drhlík Jindřich",
+    "active": true,
+    "page_permissions": [
+      "studio"
+    ],
+    "features": {
+      "employee_detail_top_products": false,
+      "employee_detail_product_table": false,
+      "sidebar_company_statistics": false,
+      "studio_see_all_employees": true
+    }
   }
 }
