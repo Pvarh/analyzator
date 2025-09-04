@@ -672,11 +672,18 @@ def show_employees_grid(analyzer, name_filter=""):
                         use_container_width=True,
                         help=f"Kliknite pre detail zamestnanca {employee_name}"
                     ):
-                        st.session_state['selected_employee_name'] = emp['Kontaktní osoba-Jméno a příjmení']
-                        # Použijem filtrovaný analyzer namiesto pôvodného
-                        st.session_state['studio_analyzer'] = st.session_state.get('filtered_studio_analyzer', analyzer)
-                        st.session_state['current_page'] = 'employee_detail'
-                        st.rerun()
+                        # ✅ KONTROLA OPRÁVNENÍ pre employee_detail
+                        from auth.auth import can_access_detail_page
+                        
+                        if can_access_detail_page('employee_detail'):
+                            st.session_state['selected_employee_name'] = emp['Kontaktní osoba-Jméno a příjmení']
+                            # Použijem filtrovaný analyzer namiesto pôvodného
+                            st.session_state['studio_analyzer'] = st.session_state.get('filtered_studio_analyzer', analyzer)
+                            st.session_state['current_page'] = 'employee_detail'
+                            st.rerun()
+                        else:
+                            st.error("❌ Nemáte oprávnenie pre detail zamestnanca")
+                            st.info("🔒 Kontaktujte administrátora pre rozšírenie oprávnení")
 
 
 # ---------------------------------------------------------------------------

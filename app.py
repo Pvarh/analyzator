@@ -13,7 +13,7 @@ from ui.pages import overview, employee, heatmap, benchmark, studio, employee_de
 from ui.styling import apply_dark_theme
 
 # Import autentifikačného systému
-from auth.auth import init_auth, is_authenticated, show_login_page, show_user_info, is_admin, log_page_activity, can_show_sidebar_statistics, get_allowed_pages, can_access_page, get_default_page
+from auth.auth import init_auth, is_authenticated, show_login_page, show_user_info, is_admin, log_page_activity, can_show_sidebar_statistics, get_allowed_pages, can_access_page, get_default_page, can_access_detail_page, get_parent_page_for_detail
 from auth.admin import show_admin_page
 
 # Import server monitoring
@@ -812,7 +812,18 @@ def run_main_application():
     
     # ✅ PAGE ACCESS CONTROL - kontrola oprávnení
     current_page = st.session_state.current_page
-    if not can_access_page(current_page):
+    
+    # Špeciálne pravidlo pre detail stránky
+    if current_page in ['employee_detail']:
+        if not can_access_detail_page(current_page):
+            st.error(f"❌ Nemáte oprávnenie pre {current_page} (potrebujete prístup k parent stránke)")
+            
+            # Presmeruj na vhodnú parent stránku
+            parent_page = get_parent_page_for_detail(current_page)
+            st.info(f"🔄 Presmerovávame na: {parent_page}")
+            st.session_state.current_page = parent_page
+            st.rerun()
+    elif not can_access_page(current_page):
         st.error(f"❌ Nemáte oprávnenie pre stránku: {current_page}")
         
         # Presmeruj na default stránku

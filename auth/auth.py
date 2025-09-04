@@ -581,3 +581,43 @@ def get_default_page(user_email: str = None) -> str:
         
     except Exception:
         return 'overview'
+
+
+def get_parent_page_for_detail(detail_page: str) -> str:
+    """Získa parent stránku pre detail stránky (napr. employee_detail -> studio/employee)"""
+    try:
+        # Definícia parent pages pre detail stránky
+        detail_parent_mapping = {
+            'employee_detail': ['studio', 'employee', 'overview'],  # employee_detail môže byť z týchto stránok
+            # Pridaj ďalšie detail stránky podľa potreby
+        }
+        
+        if detail_page in detail_parent_mapping:
+            # Získaj povolené stránky pre používateľa
+            allowed_pages = get_allowed_pages()
+            
+            # Nájdi prvú povolenú parent stránku
+            for parent_page in detail_parent_mapping[detail_page]:
+                if parent_page in allowed_pages:
+                    return parent_page
+        
+        # Ak nenájde parent, vráti default
+        return get_default_page()
+        
+    except Exception:
+        return 'overview'
+
+
+def can_access_detail_page(detail_page: str, user_email: str = None) -> bool:
+    """Skontroluje či používateľ má prístup k detail stránke cez parent pages"""
+    try:
+        if detail_page == 'employee_detail':
+            # employee_detail je dostupný ak má prístup k studio, employee alebo overview
+            allowed_pages = get_allowed_pages(user_email)
+            return any(page in allowed_pages for page in ['studio', 'employee', 'overview'])
+        
+        # Pre iné detail stránky môžeš pridať logiku
+        return can_access_page(detail_page, user_email)
+        
+    except Exception:
+        return False

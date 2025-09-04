@@ -2852,22 +2852,23 @@ def show_page_permissions_management(user_db):
     }
     
     try:
-        users = user_db.get_all_users()
+        # Získaj všetkých používateľov ako dict
+        all_users_data = user_db.load_users()  # Načítaj priamo súbor
         
-        if not users:
+        if not all_users_data:
             st.warning("⚠️ Žiadni používatelia v databáze")
             return
         
         # Výber používateľa
-        user_emails = list(users.keys())
+        user_emails = list(all_users_data.keys())
         selected_email = st.selectbox(
             "👤 Vyberte používateľa:",
             user_emails,
-            format_func=lambda x: f"{users[x].get('name', x)} ({x})"
+            format_func=lambda x: f"{all_users_data[x].get('name', x)} ({x})"
         )
         
         if selected_email:
-            user_data = users[selected_email]
+            user_data = all_users_data[selected_email]
             
             st.divider()
             
@@ -2930,7 +2931,7 @@ def show_page_permissions_management(user_db):
                     try:
                         # Aktualizuj používateľa
                         user_data['page_permissions'] = new_permissions
-                        users[selected_email] = user_data
+                        all_users_data[selected_email] = user_data
                         
                         # Ulož do databázy
                         user_db.update_user(selected_email, user_data)
