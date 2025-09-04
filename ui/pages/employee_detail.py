@@ -2,11 +2,112 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import time
+import hashlib
+import os
+from concurrent.futures import ThreadPoolExecutor
 from core.studio_analyzer import StudioAnalyzer
 from auth.auth import has_feature_access, init_auth
 
+@st.cache_data(ttl=300)  # 5 minút cache
+def get_employee_detailed_data_cached(employee_name, file_hash=None, filter_info=None):
+    """Cached verzia získania detailných dát pre zamestnanca"""
+    studio_analyzer = st.session_state.get('studio_analyzer')
+    if not studio_analyzer:
+        return pd.DataFrame()
+    
+    return studio_analyzer.get_employee_detailed_data(employee_name)
+
+@st.cache_data(ttl=300)
+def calculate_employee_metrics_cached(emp_data_hash, emp_data_dict):
+    """Cached výpočet základných metrík"""
+    emp_data = pd.DataFrame(emp_data_dict)
+    
+    if emp_data.empty:
+        return None
+    
+    total_sales = emp_data['Cena/jedn.'].sum()
+    total_orders = len(emp_data)
+    avg_order = emp_data['Cena/jedn.'].mean()
+    unique_orders = emp_data['Doklad'].nunique()
+    
+    # Pre výpočet rozsahu dátumov
+    if 'Datum real.' in emp_data.columns:
+        date_range = (emp_data['Datum real.'].max() - emp_data['Datum real.'].min()).days
+    else:
+        date_range = 0
+    
+    return {
+        'total_sales': total_sales,
+        'total_orders': total_orders,
+        'avg_order': avg_order,
+        'unique_orders': unique_orders,
+        'date_range': date_range
+    }
+
+@st.cache_data(ttl=300)
+def calculate_category_analysis_cached(emp_data_hash, emp_data_dict):
+    """Cached analýza podľa kategórií"""
+    emp_data = pd.DataFrame(emp_data_dict)
+    
+    if emp_data.empty or 'Název_norm' not in emp_data.columns:
+        return pd.DataFrame()
+    
+    category_sales = emp_data.groupby('Název_norm').agg({
+        'Cena/jedn.': ['sum', 'count', 'mean']
+    }).round(0)
+    
+    category_sales.columns = ['Celkový predaj', 'Počet kusov', 'Priemerná cena']
+    return category_sales.reset_index()
+
+def get_data_hash(data):
+    """Vytvorí hash pre pandas DataFrame alebo iné dáta"""
+    if isinstance(data, pd.DataFrame):
+        return hashlib.md5(str(data.values.tobytes()).encode()).hexdigest()
+    return hashlib.md5(str(data).encode()).hexdigest()
+
+def render_employee_metrics_optimized(metrics):
+    """Optimalizované renderovanie metrík"""
+    col1, col2, col3, col4, col5 = st.columns(5)
+    
+    with col1:
+        st.metric("💰 Celkový predaj", f"{metrics['total_sales']:,.0f} Kč")
+    with col2:
+        st.metric("📦 Celkom položiek", metrics['total_orders'])
+    with col3:
+        st.metric("🧾 Unikátne objednávky", metrics['unique_orders'])
+    with col4:
+        st.metric("📈 Priemerná hodnota", f"{metrics['avg_order']:,.0f} Kč")
+    with col5:
+        st.metric("📅 Aktívnych dní", metrics['date_range'])
+
+def render_category_charts_optimized(category_sales):
+    """Optimalizované renderovanie grafov kategórií"""
+    col_chart, col_table = st.columns(2)
+    
+    with col_chart:
+        fig_pie = px.pie(
+            category_sales, 
+            values='Celkový predaj', 
+            names='Název_norm',
+            title="Podiel predaja podľa kategórií",
+            color_discrete_sequence=['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57', '#A259F7']
+        )
+        st.plotly_chart(fig_pie, use_container_width=True)
+    
+    with col_table:
+        st.subheader("📋 Tabuľka kategórií")
+        category_display = category_sales.copy()
+        category_display['Název_norm'] = category_display['Název_norm'].apply(lambda x: x.replace('_', ' ').capitalize())
+        category_display['Celkový predaj'] = category_display['Celkový predaj'].apply(lambda x: f"{x:,.0f} Kč")
+        category_display['Priemerná cena'] = category_display['Priemerná cena'].apply(lambda x: f"{x:,.0f} Kč")
+        st.dataframe(category_display, use_container_width=True, hide_index=True)
+
 def render(selected_employee_name, analyzer_or_data):
-    """Detailná stránka pre konkrétneho zamestnanca"""
+    """Detailná stránka pre konkrétneho zamestnanca - optimalizovaná verzia"""
+    
+    # Meranie výkonu
+    start_time = time.time()
     
     # Zabezpečenie, že autentifikácia je inicializovaná
     if 'user_db' not in st.session_state:
@@ -28,9 +129,7 @@ def render(selected_employee_name, analyzer_or_data):
             st.rerun()
     
     # Kontrola analyzéra
-    if isinstance(analyzer_or_data, StudioAnalyzer):
-        studio_analyzer = analyzer_or_data
-    else:
+    if not isinstance(analyzer_or_data, StudioAnalyzer):
         st.error("❌ Pre detail zamestnanca potrebuješ StudioAnalyzer, nie DataAnalyzer")
         st.info("💡 Detail zamestnanca funguje len v Studio module s nahratým Excel súborom")
         if st.button("← Späť na Studio"):
@@ -40,8 +139,25 @@ def render(selected_employee_name, analyzer_or_data):
             st.rerun()
         return
     
-    # Získanie dát pre zamestnanca
-    emp_data = studio_analyzer.get_employee_detailed_data(selected_employee_name)
+    # Cached získanie dát pre zamestnanca
+    file_hash = None
+    filter_info = st.session_state.get('date_filter_info')
+    
+    try:
+        emp_data = get_employee_detailed_data_cached(
+            selected_employee_name, 
+            file_hash=file_hash,
+            filter_info=filter_info
+        )
+    except Exception as e:
+        st.error(f"❌ Chyba pri načítavaní dát: {e}")
+        if st.button("← Späť na Studio"):
+            st.session_state['current_page'] = 'studio'
+            if 'selected_employee_name' in st.session_state:
+                del st.session_state['selected_employee_name']  
+            st.rerun()
+        return
+    
     if emp_data.empty:
         st.warning("Žiadne dáta pre tohto zamestnanca")
         if st.button("← Späť na Studio"):
@@ -51,67 +167,59 @@ def render(selected_employee_name, analyzer_or_data):
             st.rerun()
         return
     
+    # Hash pre cache invalidation
+    emp_data_hash = get_data_hash(emp_data)
+    emp_data_dict = emp_data.to_dict('records')
+    
+    # Paralelné vykonávanie výpočtov
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        # Spustenie cached výpočtov paralelne
+        future_metrics = executor.submit(
+            calculate_employee_metrics_cached, 
+            emp_data_hash, 
+            emp_data_dict
+        )
+        future_categories = executor.submit(
+            calculate_category_analysis_cached,
+            emp_data_hash,
+            emp_data_dict
+        )
+        
+        # Čakanie na výsledky
+        metrics = future_metrics.result()
+        category_sales = future_categories.result()
+    
     # ==================== ZÁKLADNÉ METRIKY ====================
     st.header("📊 Základné metriky")
     
-    total_sales = emp_data['Cena/jedn.'].sum()
-    total_orders = len(emp_data)
-    avg_order = emp_data['Cena/jedn.'].mean()
-    unique_orders = emp_data['Doklad'].nunique()
-    date_range = (emp_data['Datum real.'].max() - emp_data['Datum real.'].min()).days
-    
-    col1, col2, col3, col4, col5 = st.columns(5)
-    
-    with col1:
-        st.metric("💰 Celkový predaj", f"{total_sales:,.0f} Kč")
-    with col2:
-        st.metric("📦 Celkom položiek", total_orders)
-    with col3:
-        st.metric("🧾 Unikátne objednávky", unique_orders)
-    with col4:
-        st.metric("📈 Priemerná hodnota", f"{avg_order:,.0f} Kč")
-    with col5:
-        st.metric("📅 Aktívnych dní", date_range)
+    if metrics:
+        render_employee_metrics_optimized(metrics)
+    else:
+        st.error("❌ Chyba pri výpočte metrík")
+        return
     
     st.divider()
     
     # ==================== PREDAJ PODĽA KATEGÓRIÍ ====================
     st.header("🏷️ Predaj podľa kategórií spotrebičov")
     
-    category_sales = emp_data.groupby('Název_norm').agg({
-        'Cena/jedn.': ['sum', 'count', 'mean']
-    }).round(0)
-    
-    category_sales.columns = ['Celkový predaj', 'Počet kusov', 'Priemerná cena']
-    category_sales = category_sales.reset_index()
-    
-    # Graf podľa kategórií - pie chart
-    col_chart, col_table = st.columns(2)
-    
-    with col_chart:
-        fig_pie = px.pie(
-            category_sales, 
-            values='Celkový predaj', 
-            names='Název_norm',
-            title="Podiel predaja podľa kategórií",
-            color_discrete_sequence=['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57', '#A259F7']
-        )
-        st.plotly_chart(fig_pie, use_container_width=True)
-    
-    with col_table:
-        st.subheader("📋 Tabuľka kategórií")
-        category_display = category_sales.copy()
-        category_display['Název_norm'] = category_display['Název_norm'].apply(lambda x: x.replace('_', ' ').capitalize())
-        category_display['Celkový predaj'] = category_display['Celkový predaj'].apply(lambda x: f"{x:,.0f} Kč")
-        category_display['Priemerná cena'] = category_display['Priemerná cena'].apply(lambda x: f"{x:,.0f} Kč")
-        st.dataframe(category_display, use_container_width=True, hide_index=True)
+    if not category_sales.empty:
+        render_category_charts_optimized(category_sales)
+    else:
+        st.warning("⚠️ Žiadne dáta o kategóriách")
     
     st.divider()
+    
+    # Meranie výkonu - zobrazenie času načítania
+    load_time = time.time() - start_time
+    if load_time > 1.0:  # Zobraz len ak trvá viac ako 1 sekundu
+        st.caption(f"⏱️ Stránka načítaná za {load_time:.2f}s")
     
     # ==================== ✅ NOVÁ SEKCIA: TOP PRODUKTY PODĽA KATEGÓRIÍ ====================
     if has_feature_access("employee_detail_top_products"):
         st.header("🏆 Najpredávanejšie produkty z každej kategórie")
         
+        # Používame pôvodné emp_data namiesto cache pre túto sekciu
         top_products_per_category = get_top_products_per_category(emp_data)
         
         if top_products_per_category:
