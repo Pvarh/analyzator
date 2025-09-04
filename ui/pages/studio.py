@@ -11,28 +11,16 @@ from ui.styling import (
 )
 import hashlib
 import os
+import pickle
+import time
+from datetime import datetime
 
-# Simple performance enhancement
-@st.cache_data(ttl=300)  # 5 min cache
-def load_studio_data_cached():
-    """Cached version of studio data loading"""
-    return load_studio_data()
+# ---------------------------------------------------------------------------
+# INTELLIGENT SERVER-SIDE CACHING SYSTEM
+# ---------------------------------------------------------------------------
 
-@st.cache_data
-def create_analyzer_cached(folder_hash):
-    """Cached analyzer creation - invalidated when studio folder changes"""
-    studio_data = load_studio_data(folder_hash)
-    if studio_data is None:
-        return None
-    return StudioAnalyzer(studio_data)
-
-def get_file_hash(file_path):
-    """Simple file hash for cache invalidation"""
-    try:
-        stat = os.stat(file_path)
-        return hashlib.md5(f"{file_path}:{stat.st_size}:{stat.st_mtime}".encode()).hexdigest()[:8]
-    except:
-        return "unknown"
+CACHE_DIR = Path("data/cache/studio")
+CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 def get_studio_folder_hash():
     """Hash celého data/studio priečinka pre cache invalidation"""
@@ -55,6 +43,146 @@ def get_studio_folder_hash():
     except:
         return "unknown"
 
+def get_cache_file_path(cache_key):
+    """Vráti cestu k cache súboru"""
+    return CACHE_DIR / f"{cache_key}.pkl"
+
+def save_to_cache(cache_key, data):
+    """Uloží dáta do cache na disk"""
+    try:
+        cache_file = get_cache_file_path(cache_key)
+        cache_data = {
+            'data': data,
+            'timestamp': time.time(),
+            'folder_hash': get_studio_folder_hash()
+        }
+        with open(cache_file, 'wb') as f:
+            pickle.dump(cache_data, f)
+        return True
+    except Exception as e:
+        print(f"Cache save error: {e}")
+        return False
+
+def load_from_cache(cache_key):
+    """Načíta dáta z cache ak sú platné"""
+    try:
+        cache_file = get_cache_file_path(cache_key)
+        if not cache_file.exists():
+            return None
+        
+        with open(cache_file, 'rb') as f:
+            cache_data = pickle.load(f)
+        
+        # Skontroluj či sa nezmenil folder
+        current_hash = get_studio_folder_hash()
+        if cache_data.get('folder_hash') != current_hash:
+            # Cache je neplatný, vymaž ho
+            cache_file.unlink()
+            return None
+        
+        return cache_data['data']
+    except Exception as e:
+        print(f"Cache load error: {e}")
+        return None
+
+@st.cache_data
+def load_studio_data_with_server_cache():
+    """Načíta Studio dáta s intelligent server-side cache"""
+    
+    folder_hash = get_studio_folder_hash()
+    cache_key = f"studio_data_{folder_hash}"
+    
+    # Skús načítať z server cache
+    cached_data = load_from_cache(cache_key)
+    if cached_data is not None:
+        return cached_data
+    
+    # Cache miss - načítaj fresh dáta
+    studio_path = Path("data/studio")
+    
+    if not studio_path.exists():
+        return None
+    
+    # Nájdi Excel súbory
+    excel_files = list(studio_path.glob("*.xlsx")) + list(studio_path.glob("*.xls"))
+    
+    if not excel_files:
+        return None
+    
+    # Použij prvý nájdený súbor (najnovší)
+    excel_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+    selected_file = excel_files[0]
+    
+    file_path = str(selected_file)
+    
+    # Uloži do server cache
+    save_to_cache(cache_key, file_path)
+    
+    return file_path
+
+@st.cache_data
+def create_analyzer_with_server_cache():
+    """Vytvorí StudioAnalyzer s intelligent server-side cache"""
+    
+    folder_hash = get_studio_folder_hash()
+    cache_key = f"studio_analyzer_{folder_hash}"
+    
+    # Skús načítať analyzer z server cache
+    cached_analyzer_data = load_from_cache(cache_key)
+    if cached_analyzer_data is not None:
+        # Rekonštruuj analyzer z cached dát
+        try:
+            studio_data_file = load_studio_data_with_server_cache()
+            if studio_data_file:
+                analyzer = StudioAnalyzer(studio_data_file)
+                return analyzer
+        except:
+            pass
+    
+    # Cache miss - vytvor fresh analyzer
+    studio_data_file = load_studio_data_with_server_cache()
+    if studio_data_file is None:
+        return None
+    
+    try:
+        analyzer = StudioAnalyzer(studio_data_file)
+        
+        # Uloži analyzer info do cache (nie celý analyzer kvôli veľkosti)
+        cache_info = {
+            'file_path': studio_data_file,
+            'created_at': datetime.now().isoformat()
+        }
+        save_to_cache(cache_key, cache_info)
+        
+        return analyzer
+    except Exception as e:
+        print(f"Analyzer creation error: {e}")
+        return None
+
+# Compatibility functions for existing code
+@st.cache_data(ttl=300)
+def load_studio_data_cached():
+    """Compatibility wrapper - deprecated"""
+    return load_studio_data_with_server_cache()
+
+@st.cache_data
+def create_analyzer_cached(folder_hash):
+    """Compatibility wrapper - deprecated"""
+    return create_analyzer_with_server_cache()
+
+def get_file_hash(file_path):
+    """Simple file hash for cache invalidation"""
+    try:
+        stat = os.stat(file_path)
+        return hashlib.md5(f"{file_path}:{stat.st_size}:{stat.st_mtime}".encode()).hexdigest()[:8]
+    except:
+        return "unknown"
+
+@st.cache_data
+def load_studio_data(folder_hash):
+    """Legacy function - now uses server cache"""
+    return load_studio_data_with_server_cache()
+
 # ---------------------------------------------------------------------------
 # RENDER FUNCTION FOR APP.PY
 # ---------------------------------------------------------------------------
@@ -68,22 +196,18 @@ def render(analyzer=None):
 def show_studio_page():
     apply_dark_theme()
     
-    # Získaj hash celého data/studio priečinka pre intelligent cache
-    folder_hash = get_studio_folder_hash()
+    # ⚡ INTELLIGENT SERVER-SIDE CACHING
+    # Automaticky načíta cached dáta alebo vytvorí nové ak sa súbory zmenili
     
-    # Automatické načítanie súborov z /data/studio/ - cached
-    studio_data = load_studio_data(folder_hash)
-    
-    if studio_data is None:
-        st.error("❌ Žiadne súbory nenájdené v priečinku /data/studio/")
-        st.info("📁 Umiestnite Excel súbory s dátami o predaji do priečinka /data/studio/")
-        return
+    st.info("⚡ **Intelligent Cache:** Dáta sa načítajú z cache pre rýchlosť, automaticky sa aktualizujú pri zmene súborov")
     
     try:
-        # Use cached analyzer creation with folder hash
-        analyzer = create_analyzer_cached(folder_hash)
+        # Použij nový server-side cache systém
+        analyzer = create_analyzer_with_server_cache()
         if analyzer is None:
-            raise Exception("Failed to create analyzer")
+            st.error("❌ Žiadne súbory nenájdené v priečinku /data/studio/")
+            st.info("📁 Umiestnite Excel súbory s dátami o predaji do priečinka /data/studio/")
+            return
     except Exception as e:
         st.error(f"❌ Chyba pri načítaní dát: {e}")
         return
@@ -93,14 +217,20 @@ def show_studio_page():
         return
     
     # Cache info a aktuálne dáta info
-    with st.expander("ℹ️ Informácie o dátach a cache", expanded=False):
+    folder_hash = get_studio_folder_hash()
+    with st.expander("ℹ️ Server Cache Informácie", expanded=False):
         col1, col2 = st.columns(2)
         with col1:
-            st.info(f"📁 **Aktuálny súbor:** {Path(studio_data).name}")
+            studio_file = load_studio_data_with_server_cache()
+            st.info(f"📁 **Aktuálny súbor:** {Path(studio_file).name if studio_file else 'N/A'}")
             st.info(f"📊 **Počet záznamov:** {len(analyzer.df_active):,}")
         with col2:
             st.info(f"🔄 **Cache hash:** `{folder_hash}`")
-            st.success("✅ **Cache stav:** Dáta sa automaticky aktualizujú pri zmene súborov")
+            st.success("✅ **Server Cache:** Aktívny - auto-invalidation pri zmene súborov")
+            
+        # Cache directory info
+        cache_files = list(CACHE_DIR.glob("*.pkl"))
+        st.info(f"💾 **Cache súbory:** {len(cache_files)} súborov v `{CACHE_DIR}`")
             
         # Info o zobrazovaných zamestnancoch
         current_user = get_current_user()
