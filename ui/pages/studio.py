@@ -609,7 +609,7 @@ def show_employees_filter_section(analyzer):
     
     return filter_type, appliance_filter, min_count
 
-@st.cache_data(ttl=300)  # 5 minút cache
+@st.cache_data(ttl=300)  # 5 minút cache - obnovená po fixe
 def get_filtered_employees(_analyzer, filter_type, appliance_filter, min_count=0):
     """Vráti filtrovaných zamestnancov podľa kritérií + autentifikácie"""
     
