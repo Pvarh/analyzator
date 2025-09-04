@@ -903,8 +903,8 @@ def render_components_parallel(filtered_analyzer):
             
             # Pre-spracovanie dát paralelne (nie UI renderovanie)
             futures = {
-                'employee_summary': executor.submit(lambda: filtered_analyzer.get_employee_summary()),
-                'appliance_data': executor.submit(lambda: filtered_analyzer.get_appliance_breakdown()),
+                'employee_sales': executor.submit(lambda: get_employee_sales_summary_safe(filtered_analyzer.df_active.to_dict('records'))),
+                'appliance_data': executor.submit(lambda: get_appliance_breakdown_safe(filtered_analyzer)),
                 'monthly_data': executor.submit(lambda: process_monthly_data(filtered_analyzer)),
                 'daily_data': executor.submit(lambda: process_daily_data(filtered_analyzer)),
                 'category_analysis': executor.submit(lambda: process_category_data(filtered_analyzer))
@@ -968,6 +968,50 @@ def process_category_data(analyzer):
     except:
         return pd.Series()
 
+def get_appliance_breakdown_safe(analyzer):
+    """Bezpečné získanie breakdown spotrebičov"""
+    try:
+        # Použijem priamo dáta z analyzer
+        if hasattr(analyzer, 'df_active') and not analyzer.df_active.empty:
+            # Analýza podľa Název_norm (normalizované názvy spotrebičov)
+            appliance_data = analyzer.df_active.groupby('Název_norm')['Cena/jedn.'].sum().sort_values(ascending=False)
+            return appliance_data
+        else:
+            return pd.Series()
+    except Exception as e:
+        print(f"Chyba pri get_appliance_breakdown_safe: {e}")
+        return pd.Series()
+
+@st.cache_data(ttl=300)
+def get_employee_sales_summary_cached(analyzer_hash, analyzer_data_dict):
+    """Cache funkcia pre súhrn predajov zamestnancov v Kč"""
+    return get_employee_sales_summary_safe(analyzer_data_dict)
+
+def get_employee_sales_summary_safe(analyzer_data_dict):
+    """Bezpečné získanie súhrnu predajov zamestnancov"""
+    df_active = pd.DataFrame(analyzer_data_dict)
+    
+    if df_active.empty:
+        return pd.DataFrame()
+    
+    try:
+        # Súhrn predajov podľa zamestnancov v Kč
+        employee_sales = df_active.groupby('Kontaktní osoba-Jméno a příjmení').agg({
+            'Cena/jedn.': 'sum',  # Celkový predaj v Kč
+            'Doklad': 'nunique',  # Počet unikátnych objednávok
+        }).reset_index()
+        
+        employee_sales.columns = ['Zamestnanec', 'Celkový_predaj_Kc', 'Pocet_objednavok']
+        
+        # Zoradenie podľa predaja
+        employee_sales = employee_sales.sort_values('Celkový_predaj_Kc', ascending=False)
+        
+        return employee_sales
+        
+    except Exception as e:
+        print(f"Chyba v get_employee_sales_summary_safe: {e}")
+        return pd.DataFrame()
+
 def show_basic_stats_optimized(analyzer, precomputed_results):
     """Optimalizované zobrazenie štatistík s predspracovanými dátami"""
     st.subheader("📊 Základné štatistiky")
@@ -995,16 +1039,33 @@ def show_appliance_stats_optimized(analyzer, precomputed_results):
     """Optimalizované zobrazenie štatistík spotrebičov"""
     st.subheader("🏷️ Predaj podľa kategórií spotrebičov")
     
+    # Použijem predspracované dáta ak sú dostupné
     if precomputed_results.get('appliance_data') is not None:
         appliance_data = precomputed_results['appliance_data']
     else:
-        appliance_data = analyzer.get_appliance_breakdown()
+        # Fallback - získaj dáta priamo
+        try:
+            appliance_data = analyzer.df_active.groupby('Název_norm')['Cena/jedn.'].sum().sort_values(ascending=False)
+        except:
+            appliance_data = pd.Series()
     
     if not appliance_data.empty:
         cols = st.columns(min(3, len(appliance_data)))
         for idx, (category, amount) in enumerate(appliance_data.head(6).items()):
             with cols[idx % 3]:
-                st.metric(f"🏠 {category.replace('_', ' ').title()}", f"{amount:,.0f} Kč")
+                # Ikony pre kategórie
+                icons = {
+                    'Mikrovlnka': '🔥',
+                    'Trouba': '🏠', 
+                    'Chladnicka': '❄️',
+                    'Varna deska': '🍳',
+                    'Mycka': '🧽',
+                    'Digestor': '💨'
+                }
+                icon = icons.get(category, '📦')
+                st.metric(f"{icon} {category.replace('_', ' ').title()}", f"{amount:,.0f} Kč")
+    else:
+        st.info("📊 Žiadne dáta o spotrebičoch na zobrazenie")
 
 def show_charts_optimized(analyzer, precomputed_results):
     """Optimalizované zobrazenie grafov s predspracovanými dátami"""
@@ -1094,8 +1155,13 @@ def show_top_employees_optimized(_analyzer):
     
     st.subheader("🏆 Top 10 zamestnanci")
     
-    # Výpočet top zamestnancov
-    top_employees = _analyzer.get_employee_summary().head(10)
+    # Výpočet top zamestnancov s predajom v Kč
+    try:
+        analyzer_data = _analyzer.df_active.to_dict('records')
+        top_employees = get_employee_sales_summary_safe(analyzer_data).head(10)
+    except:
+        # Fallback na pôvodnú metódu
+        top_employees = _analyzer.get_employee_summary().head(10)
     
     if top_employees.empty:
         st.info("📊 Žiadni zamestnanci na zobrazenie")
@@ -1110,21 +1176,29 @@ def show_top_employees_optimized(_analyzer):
                 col1, col2, col3 = st.columns([3, 2, 2])
                 
                 with col1:
-                    # Klikateľné tlačidlo na detail
+                    # Klikateľné tlačidlo na detail - kontrola názvov stĺpcov
+                    employee_name = emp.get('Zamestnanec', emp.get('Kontaktní osoba-Jméno a příjmení', 'Neznámy'))
                     if st.button(
-                        f"👤 {emp['Zamestnanec']}", 
+                        f"👤 {employee_name}", 
                         key=f"emp_btn_{i}",
                         help=f"Kliknite pre detail zamestnanca"
                     ):
-                        st.session_state.selected_employee_name = emp['Zamestnanec']
+                        st.session_state.selected_employee_name = employee_name
                         st.session_state.current_page = 'employee_detail'
                         st.rerun()
                 
                 with col2:
-                    st.metric("Predaj", f"{emp['Celkový predaj']:,.0f} Kč")
+                    # Používam správny stĺpec pre predaj v Kč
+                    sales_value = emp.get('Celkový_predaj_Kc', emp.get('total', 0))
+                    st.metric("Predaj", f"{sales_value:,.0f} Kč")
                 
                 with col3:
-                    st.metric("Objednávky", f"{emp['Počet objednávok']}")
+                    # Používam správny stĺpec pre objednávky
+                    orders_count = emp.get('Pocet_objednavok', 0)
+                    if orders_count == 0:
+                        # Fallback - spočítaj z appliance stĺpcov
+                        orders_count = sum([emp.get(appliance, 0) for appliance in ['mikrovlnka', 'trouba', 'chladnicka', 'varna deska', 'mycka', 'digestor']])
+                    st.metric("Objednávky", f"{orders_count}")
     
     with cols[1]:
         for i, (_, emp) in enumerate(top_employees.tail(5).iterrows(), 5):
@@ -1132,17 +1206,26 @@ def show_top_employees_optimized(_analyzer):
                 col1, col2, col3 = st.columns([3, 2, 2])
                 
                 with col1:
+                    # Klikateľné tlačidlo na detail - kontrola názvov stĺpcov
+                    employee_name = emp.get('Zamestnanec', emp.get('Kontaktní osoba-Jméno a příjmení', 'Neznámy'))
                     if st.button(
-                        f"👤 {emp['Zamestnanec']}", 
+                        f"👤 {employee_name}", 
                         key=f"emp_btn_{i}",
                         help=f"Kliknite pre detail zamestnanca"
                     ):
-                        st.session_state.selected_employee_name = emp['Zamestnanec']
+                        st.session_state.selected_employee_name = employee_name
                         st.session_state.current_page = 'employee_detail'
                         st.rerun()
                 
                 with col2:
-                    st.metric("Predaj", f"{emp['Celkový predaj']:,.0f} Kč")
+                    # Používam správny stĺpec pre predaj v Kč
+                    sales_value = emp.get('Celkový_predaj_Kc', emp.get('total', 0))
+                    st.metric("Predaj", f"{sales_value:,.0f} Kč")
                 
                 with col3:
-                    st.metric("Objednávky", f"{emp['Počet objednávok']}")
+                    # Používam správny stĺpec pre objednávky
+                    orders_count = emp.get('Pocet_objednavok', 0)
+                    if orders_count == 0:
+                        # Fallback - spočítaj z appliance stĺpcov
+                        orders_count = sum([emp.get(appliance, 0) for appliance in ['mikrovlnka', 'trouba', 'chladnicka', 'varna deska', 'mycka', 'digestor']])
+                    st.metric("Objednávky", f"{orders_count}")
