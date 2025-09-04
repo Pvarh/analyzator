@@ -234,7 +234,18 @@ def show_studio_page():
             
         # Debug info o zobrazovaných zamestnancoch
         current_user = get_current_user()
+        
+        # EXTRA DEBUG - Skontroluj session vs fresh data
+        session_user = st.session_state.get('authenticated_user')
+        
         st.markdown("### 🔍 Debug - User Access Info")
+        
+        with st.expander("🔧 EXTRA DEBUG - Session vs Fresh Data", expanded=False):
+            st.write("**Session user data:**", session_user)
+            st.write("**Fresh user data:**", current_user)
+            if 'user_db' in st.session_state:
+                fresh_from_db = st.session_state.user_db.users.get(current_user.get('email') if current_user else None)
+                st.write("**Direct from DB:**", fresh_from_db)
         
         col_debug1, col_debug2 = st.columns(2)
         with col_debug1:
