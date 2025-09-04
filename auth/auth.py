@@ -516,3 +516,68 @@ def get_user_activity_stats(user_email: str = None, days: int = 7) -> Dict:
         return activity_logger.get_user_activity(user_email, days)
     except Exception:
         return {}
+
+
+# ==============================================================================
+# PAGE PERMISSIONS SYSTEM
+# ==============================================================================
+
+def get_allowed_pages(user_email: str = None) -> list:
+    """Získa zoznam stránok, ktoré môže používateľ vidieť"""
+    try:
+        current_user = get_current_user() if user_email is None else None
+        
+        if current_user:
+            user_data = current_user
+        else:
+            # Načítaj používateľa z databázy
+            user_db = UserDatabase()
+            user_data = user_db.get_user_by_email(user_email)
+            
+        if not user_data:
+            return []
+        
+        # Admin má prístup ku všetkým stránkam
+        if user_data.get('role') == 'admin':
+            return ['overview', 'employee', 'benchmark', 'heatmap', 'studio', 'kpi_system', 'admin']
+        
+        # Ak má definované page_permissions, použij ich
+        if 'page_permissions' in user_data:
+            return user_data['page_permissions']
+        
+        # Default oprávnenia pre manager role
+        return ['overview', 'employee', 'benchmark', 'heatmap', 'studio', 'kpi_system']
+        
+    except Exception as e:
+        logger.error(f"Error getting allowed pages: {e}")
+        return []
+
+
+def can_access_page(page_name: str, user_email: str = None) -> bool:
+    """Skontroluje či používateľ má prístup k stránke"""
+    try:
+        allowed_pages = get_allowed_pages(user_email)
+        return page_name in allowed_pages
+    except Exception:
+        return False
+
+
+def get_default_page(user_email: str = None) -> str:
+    """Získa default stránku pre používateľa"""
+    try:
+        allowed_pages = get_allowed_pages(user_email)
+        if not allowed_pages:
+            return 'overview'
+        
+        # Preferované poradie default stránok
+        preferred_order = ['overview', 'studio', 'benchmark', 'employee', 'heatmap', 'kpi_system']
+        
+        for page in preferred_order:
+            if page in allowed_pages:
+                return page
+        
+        # Ak nič nie je z preferred, vráti prvú povolenú
+        return allowed_pages[0]
+        
+    except Exception:
+        return 'overview'

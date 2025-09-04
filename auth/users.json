@@ -11,7 +11,16 @@
       "employee_detail_top_products": true,
       "employee_detail_product_table": true,
       "all_features": true
-    }
+    },
+    "page_permissions": [
+      "overview",
+      "employee", 
+      "benchmark",
+      "heatmap",
+      "studio",
+      "kpi_system",
+      "admin"
+    ]
   },
   "jolsar@sykora.eu": {
     "password_hash": "706c365cd1bbf18532229e10b246c5b7aa159342e3741c72d362de66b928d729",
@@ -25,6 +34,9 @@
       "employee_detail_top_products": false,
       "employee_detail_product_table": false,
       "sidebar_company_statistics": false
-    }
+    },
+    "page_permissions": [
+      "studio"
+    ]
   }
 }

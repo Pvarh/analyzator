@@ -129,13 +129,14 @@ def show_admin_page():
     st.title("👑 Admin Panel - Kompletný systém je úspešne nasadený!")
     
     # Activity logs ako prvý tab
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
         "📊 Aktivita logov",
         "🖥️ Server Monitor",
         "🐛 Error Logs",
         "➕ Pridať používateľa", 
         "📋 Zoznam používateľov", 
         "🎛️ Správa funkcií",
+        "🔐 Oprávnenia stránok",
         "🔑 Zmena hesla",
         "📁 Správa dát"
     ])
@@ -165,9 +166,12 @@ def show_admin_page():
         show_feature_management(user_db)
     
     with tab7:
-        show_admin_change_password(user_db)
+        show_page_permissions_management(user_db)
     
     with tab8:
+        show_admin_change_password(user_db)
+    
+    with tab9:
         show_data_management()
 
 def show_error_logs():
@@ -2829,6 +2833,130 @@ def update_realtime_content(monitor, metrics_placeholder, charts_placeholder,
                 )
             
             st.caption(f"📊 Based on {daily_stats['data_points']} measurements")
+
+
+def show_page_permissions_management(user_db):
+    """Správa oprávnení stránok pre používateľov"""
+    st.subheader("🔐 Správa oprávnení stránok")
+    st.info("👑 **Admin Panel:** Nastavte ktoré stránky môžu používatelia vidieť")
+    
+    # Definícia všetkých dostupných stránok
+    available_pages = {
+        'overview': '🏠 Prehľad',
+        'employee': '👤 Detail zamestnanca',
+        'benchmark': '🏆 Benchmark', 
+        'heatmap': '🔥 Heatmapa',
+        'studio': '🏢 Studio',
+        'kpi_system': '🎯 KPI Systém',
+        'admin': '👑 Administrácia'
+    }
+    
+    try:
+        users = user_db.get_all_users()
         
-        else:
-            st.warning(f"⚠️ {daily_stats['error']}")
+        if not users:
+            st.warning("⚠️ Žiadni používatelia v databáze")
+            return
+        
+        # Výber používateľa
+        user_emails = list(users.keys())
+        selected_email = st.selectbox(
+            "👤 Vyberte používateľa:",
+            user_emails,
+            format_func=lambda x: f"{users[x].get('name', x)} ({x})"
+        )
+        
+        if selected_email:
+            user_data = users[selected_email]
+            
+            st.divider()
+            
+            # Info o používateľovi
+            col1, col2 = st.columns(2)
+            with col1:
+                st.info(f"**👤 Používateľ:** {user_data.get('name', 'N/A')}")
+                st.info(f"**📧 Email:** {selected_email}")
+            with col2:
+                st.info(f"**🎭 Rola:** {user_data.get('role', 'N/A')}")
+                st.info(f"**🏙️ Mestá:** {', '.join(user_data.get('cities', []))}")
+            
+            st.markdown("### 🔐 Oprávnenia stránok")
+            
+            # Získaj aktuálne oprávnenia
+            current_permissions = user_data.get('page_permissions', [])
+            
+            # Admin má vždy všetky oprávnenia
+            if user_data.get('role') == 'admin':
+                st.success("👑 **Admin používateľ má automaticky prístup ku všetkým stránkam**")
+                
+                # Zobraz iba informatívne
+                for page_id, page_name in available_pages.items():
+                    st.checkbox(
+                        page_name, 
+                        value=True, 
+                        disabled=True,
+                        key=f"perm_{selected_email}_{page_id}_info",
+                        help="Admin má vždy prístup"
+                    )
+            else:
+                # Pre non-admin používateľov - editovateľné checkboxy
+                st.info("✅ Zaškrtnuté stránky bude používateľ môcť vidieť")
+                
+                new_permissions = []
+                
+                for page_id, page_name in available_pages.items():
+                    if page_id == 'admin':
+                        # Admin stránka iba pre adminov
+                        st.checkbox(
+                            f"{page_name} (iba pre adminov)", 
+                            value=False, 
+                            disabled=True,
+                            key=f"perm_{selected_email}_{page_id}_disabled",
+                            help="Admin stránka je dostupná iba pre admin používateľov"
+                        )
+                    else:
+                        # Ostatné stránky
+                        is_enabled = st.checkbox(
+                            page_name, 
+                            value=page_id in current_permissions,
+                            key=f"perm_{selected_email}_{page_id}"
+                        )
+                        
+                        if is_enabled:
+                            new_permissions.append(page_id)
+                
+                # Tlačidlo na uloženie
+                if st.button("💾 Uložiť oprávnenia", type="primary"):
+                    try:
+                        # Aktualizuj používateľa
+                        user_data['page_permissions'] = new_permissions
+                        users[selected_email] = user_data
+                        
+                        # Ulož do databázy
+                        user_db.update_user(selected_email, user_data)
+                        
+                        st.success(f"✅ **Oprávnenia uložené!**")
+                        st.info(f"🔐 **Povolené stránky:** {', '.join([available_pages[p] for p in new_permissions])}")
+                        
+                        time.sleep(1)
+                        st.rerun()
+                        
+                    except Exception as e:
+                        st.error(f"❌ Chyba pri uložení: {e}")
+            
+            # Aktuálny stav
+            st.divider()
+            st.markdown("### 📋 Aktuálny stav oprávnení")
+            
+            if user_data.get('role') == 'admin':
+                st.success("👑 **Admin:** Prístup ku všetkým stránkam")
+            else:
+                if current_permissions:
+                    allowed_pages_names = [available_pages[p] for p in current_permissions if p in available_pages]
+                    st.success(f"✅ **Povolené stránky:** {', '.join(allowed_pages_names)}")
+                else:
+                    st.warning("⚠️ **Používateľ nemá povolené žiadne stránky!**")
+    
+    except Exception as e:
+        st.error(f"❌ Chyba pri načítaní používateľov: {e}")
+        st.exception(e)

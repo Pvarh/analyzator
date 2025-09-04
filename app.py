@@ -13,7 +13,7 @@ from ui.pages import overview, employee, heatmap, benchmark, studio, employee_de
 from ui.styling import apply_dark_theme
 
 # Import autentifikačného systému
-from auth.auth import init_auth, is_authenticated, show_login_page, show_user_info, is_admin, log_page_activity, can_show_sidebar_statistics
+from auth.auth import init_auth, is_authenticated, show_login_page, show_user_info, is_admin, log_page_activity, can_show_sidebar_statistics, get_allowed_pages, can_access_page, get_default_page
 from auth.admin import show_admin_page
 
 # Import server monitoring
@@ -515,7 +515,8 @@ def initialize_session_state():
     """Inicializácia s forced reload pri zmene nastavení"""
     
     if 'current_page' not in st.session_state:
-        st.session_state.current_page = 'overview'
+        # ✅ Nastav default page podľa používateľských oprávnení
+        st.session_state.current_page = get_default_page()
     
     if 'selected_employee' not in st.session_state:
         st.session_state.selected_employee = None
@@ -578,6 +579,9 @@ def create_sidebar():
             # NORMÁLNE STRÁNKY SIDEBAR  
             st.markdown("# 📊 Navigation")
             
+            # Získaj povolené stránky pre aktuálneho používateľa
+            allowed_pages = get_allowed_pages()
+            
             # ✅ NASTAVENIA DÁT
             st.markdown("### ⚙️ Nastavenia dát")
             
@@ -606,45 +610,51 @@ def create_sidebar():
             
             st.divider()
             
-            # NAVIGAČNÉ TLAČIDLÁ
-            if st.button("🏠 Prehľad", width='stretch', 
-                        type="primary" if current_page == 'overview' else "secondary"):
-                st.session_state.current_page = 'overview'
-                st.session_state.selected_employee = None
-                st.rerun()
+            # NAVIGAČNÉ TLAČIDLÁ - iba povolené stránky
+            if 'overview' in allowed_pages:
+                if st.button("🏠 Prehľad", width='stretch', 
+                            type="primary" if current_page == 'overview' else "secondary"):
+                    st.session_state.current_page = 'overview'
+                    st.session_state.selected_employee = None
+                    st.rerun()
             
-            if st.button("👤 Detail zamestnanca", width='stretch',
-                        type="primary" if current_page == 'employee' else "secondary"):
-                if st.session_state.selected_employee:
-                    st.session_state.current_page = 'employee'
-                else:
-                    st.warning("Najprv vyberte zamestnanca v prehľade")
+            if 'employee' in allowed_pages:
+                if st.button("👤 Detail zamestnanca", width='stretch',
+                            type="primary" if current_page == 'employee' else "secondary"):
+                    if st.session_state.selected_employee:
+                        st.session_state.current_page = 'employee'
+                    else:
+                        st.warning("Najprv vyberte zamestnanca v prehľade")
             
-            if st.button("🏆 Benchmark", width='stretch',
-                        type="primary" if current_page == 'benchmark' else "secondary"):
-                st.session_state.current_page = 'benchmark'
-                st.session_state.selected_employee = None
-                st.rerun()
+            if 'benchmark' in allowed_pages:
+                if st.button("🏆 Benchmark", width='stretch',
+                            type="primary" if current_page == 'benchmark' else "secondary"):
+                    st.session_state.current_page = 'benchmark'
+                    st.session_state.selected_employee = None
+                    st.rerun()
             
-            if st.button("🔥 Heatmapa", width='stretch',
-                        type="primary" if current_page == 'heatmap' else "secondary"):
-                st.session_state.current_page = 'heatmap'
-                st.rerun()
-                
-            if st.button("🏢 Studio", width='stretch',
-                type="primary" if current_page == 'studio' else "secondary"):
-                st.session_state.current_page = 'studio'
-                st.session_state.selected_employee = None
-                st.rerun()
+            if 'heatmap' in allowed_pages:
+                if st.button("🔥 Heatmapa", width='stretch',
+                            type="primary" if current_page == 'heatmap' else "secondary"):
+                    st.session_state.current_page = 'heatmap'
+                    st.rerun()
+                    
+            if 'studio' in allowed_pages:
+                if st.button("🏢 Studio", width='stretch',
+                    type="primary" if current_page == 'studio' else "secondary"):
+                    st.session_state.current_page = 'studio'
+                    st.session_state.selected_employee = None
+                    st.rerun()
             
-            if st.button("🎯 KPI Systém", width='stretch',
-                        type="primary" if current_page == 'kpi_system' else "secondary"):
-                st.session_state.current_page = 'kpi_system'
-                st.session_state.selected_employee = None
-                st.rerun()
+            if 'kpi_system' in allowed_pages:
+                if st.button("🎯 KPI Systém", width='stretch',
+                            type="primary" if current_page == 'kpi_system' else "secondary"):
+                    st.session_state.current_page = 'kpi_system'
+                    st.session_state.selected_employee = None
+                    st.rerun()
             
-            # ✅ Admin tlačidlo (iba pre adminov)
-            if is_admin():
+            # ✅ Admin tlačidlo (iba pre adminov s oprávnením)
+            if is_admin() and 'admin' in allowed_pages:
                 if st.button("👑 Administrácia", width='stretch',
                             type="primary" if current_page == 'admin' else "secondary"):
                     st.session_state.current_page = 'admin'
@@ -799,6 +809,17 @@ def run_main_application():
     
     # Inicializácia session state
     initialize_session_state()
+    
+    # ✅ PAGE ACCESS CONTROL - kontrola oprávnení
+    current_page = st.session_state.current_page
+    if not can_access_page(current_page):
+        st.error(f"❌ Nemáte oprávnenie pre stránku: {current_page}")
+        
+        # Presmeruj na default stránku
+        default_page = get_default_page()
+        st.info(f"🔄 Presmerovávame na: {default_page}")
+        st.session_state.current_page = default_page
+        st.rerun()
     
     # Získanie analyzátora
     analyzer = st.session_state.analyzer
