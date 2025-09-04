@@ -816,12 +816,12 @@ def render_date_filters_optimized(analyzer, analyzer_hash):
     render_components_parallel(filtered_analyzer)
 
 @st.cache_data(ttl=300)
-def apply_security_filter_optimized(analyzer):
+def apply_security_filter_optimized(_analyzer):
     """Optimalizované city-based security filtering"""
     user = get_current_user()
     
     if not user or user.get('role') == 'admin':
-        return analyzer
+        return _analyzer
     
     # Manager - aplikuj city filtering
     user_cities = user.get('cities', [])
@@ -836,21 +836,21 @@ def apply_security_filter_optimized(analyzer):
         
         # Nájdi povolených zamestnancov v studio dátach
         allowed_employees = main_analyzer.find_matching_studio_employees(
-            analyzer.df_active, user_cities
+            _analyzer.df_active, user_cities
         )
         
         if allowed_employees:
             # Filtruj studio dáta len na povolených zamestnancov  
-            filtered_df = analyzer.df_active[
-                analyzer.df_active['Kontaktní osoba-Jméno a příjmení'].isin(allowed_employees)
+            filtered_df = _analyzer.df_active[
+                _analyzer.df_active['Kontaktní osoba-Jméno a příjmení'].isin(allowed_employees)
             ].copy()
             
             if not filtered_df.empty:
                 # Vytvor nový analyzer s filtrovanými dátami
                 filtered_analyzer = StudioAnalyzer.__new__(StudioAnalyzer)
-                filtered_analyzer.df = analyzer.df
+                filtered_analyzer.df = _analyzer.df
                 filtered_analyzer.df_active = filtered_df
-                filtered_analyzer.APPLIANCES = analyzer.APPLIANCES
+                filtered_analyzer.APPLIANCES = _analyzer.APPLIANCES
                 
                 st.success(f"🔒 **Zobrazuje sa {len(allowed_employees)} zamestnancov z vašich miest:** {', '.join(user_cities)}")
                 return filtered_analyzer
@@ -862,7 +862,7 @@ def apply_security_filter_optimized(analyzer):
             return None
     except Exception as e:
         st.error(f"❌ Chyba pri aplikovaní city filtra: {e}")
-        return analyzer
+        return _analyzer
 
 def render_components_parallel(filtered_analyzer):
     """Paralelné renderovanie komponentov pre lepší výkon"""
@@ -883,13 +883,13 @@ def render_components_parallel(filtered_analyzer):
     show_top_employees_optimized(filtered_analyzer)
 
 @st.cache_data(ttl=300, show_spinner="📊 Počítam top zamestnancov...")
-def show_top_employees_optimized(analyzer):
+def show_top_employees_optimized(_analyzer):
     """Optimalizovaná verzia top zamestnancov"""
     
     st.subheader("🏆 Top 10 zamestnanci")
     
     # Výpočet top zamestnancov
-    top_employees = analyzer.get_employee_summary().head(10)
+    top_employees = _analyzer.get_employee_summary().head(10)
     
     if top_employees.empty:
         st.info("📊 Žiadni zamestnanci na zobrazenie")
