@@ -232,8 +232,24 @@ def show_studio_page():
         cache_files = list(CACHE_DIR.glob("*.pkl"))
         st.info(f"💾 **Cache súbory:** {len(cache_files)} súborov v `{CACHE_DIR}`")
             
-        # Info o zobrazovaných zamestnancoch
+        # Debug info o zobrazovaných zamestnancoch
         current_user = get_current_user()
+        st.markdown("### 🔍 Debug - User Access Info")
+        
+        col_debug1, col_debug2 = st.columns(2)
+        with col_debug1:
+            if current_user:
+                st.info(f"👤 **Používateľ:** {current_user.get('name', 'N/A')}")
+                st.info(f"📧 **Email:** {current_user.get('email', 'N/A')}")
+                st.info(f"🎭 **Rola:** {current_user.get('role', 'N/A')}")
+                st.info(f"🏙️ **Mestá:** {current_user.get('cities', [])}")
+        
+        with col_debug2:
+            st.info(f"🔧 **Features:** {current_user.get('features', {})}")
+            has_studio_feature = has_feature_access("studio_see_all_employees")
+            st.info(f"🌍 **studio_see_all_employees:** {has_studio_feature}")
+            
+        # Info o zobrazovaných zamestnancoch
         if current_user and current_user.get('role') == 'admin':
             st.success("👑 **Admin:** Zobrazujú sa všetci zamestnanci")
         elif has_feature_access("studio_see_all_employees"):
@@ -600,6 +616,19 @@ def get_filtered_employees(_analyzer, filter_type, appliance_filter, min_count=0
     # ✅ NOVÉ - Autentifikačné filtrovanie na začiatku
     user_cities = get_user_cities()
     current_user = get_current_user()
+    
+    # DEBUG: Info o filtrovaní
+    with st.expander("🔍 DEBUG - Employee Filtering", expanded=False):
+        st.write(f"**User cities:** {user_cities}")
+        st.write(f"**Current user role:** {current_user.get('role') if current_user else 'None'}")
+        st.write(f"**Has studio_see_all_employees:** {has_feature_access('studio_see_all_employees')}")
+        
+        # Zobraz dostupné stĺpce v dátach
+        st.write(f"**Available columns:** {list(_analyzer.df_active.columns)}")
+        
+        if 'workplace' in _analyzer.df_active.columns:
+            unique_workplaces = _analyzer.df_active['workplace'].unique()
+            st.write(f"**Unique workplaces:** {unique_workplaces}")
     
     # Pre administrátora alebo používateľov s "studio_see_all_employees" bez filtrovania
     if (current_user and current_user.get('role') == 'admin') or has_feature_access("studio_see_all_employees"):
