@@ -4,7 +4,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from pathlib import Path
 from core.studio_analyzer import StudioAnalyzer
-from auth.auth import filter_data_by_user_access, can_access_city, get_user_cities, get_current_user
+from auth.auth import filter_data_by_user_access, can_access_city, get_user_cities, get_current_user, has_feature_access
 from ui.styling import (
     apply_dark_theme, create_section_header, create_subsection_header, 
     create_simple_metric_card, get_dark_plotly_layout
@@ -101,6 +101,19 @@ def show_studio_page():
         with col2:
             st.info(f"🔄 **Cache hash:** `{folder_hash}`")
             st.success("✅ **Cache stav:** Dáta sa automaticky aktualizujú pri zmene súborov")
+            
+        # Info o zobrazovaných zamestnancoch
+        current_user = get_current_user()
+        if current_user and current_user.get('role') == 'admin':
+            st.success("👑 **Admin:** Zobrazujú sa všetci zamestnanci")
+        elif has_feature_access("studio_see_all_employees"):
+            st.success("🌍 **Všetci zamestnanci:** Máte povolenie vidieť všetkých")
+        else:
+            user_cities = get_user_cities()
+            if user_cities:
+                st.info(f"🏙️ **Filtrované mestá:** {', '.join(user_cities)}")
+            else:
+                st.warning("⚠️ **Žiadne prístupné mestá**")
     
     # ===== 🗓️ FILTER DÁTUMU =====
     st.subheader("📅 Filter dátumu")
@@ -458,8 +471,8 @@ def get_filtered_employees(_analyzer, filter_type, appliance_filter, min_count=0
     user_cities = get_user_cities()
     current_user = get_current_user()
     
-    # Pre administrátora bez filtrovania
-    if current_user and current_user.get('role') == 'admin':
+    # Pre administrátora alebo používateľov s "studio_see_all_employees" bez filtrovania
+    if (current_user and current_user.get('role') == 'admin') or has_feature_access("studio_see_all_employees"):
         df_to_use = _analyzer.df_active
     else:
         # Filtrovanie podľa miest používateľa

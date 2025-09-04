@@ -31,6 +31,9 @@
     ],
     "name": "Jakub Ivanič",
     "active": true,
+    "features": {
+      "studio_see_all_employees": false
+    },
     "page_permissions": [
       "overview",
       "employee",
@@ -54,7 +57,8 @@
     "features": {
       "employee_detail_top_products": true,
       "employee_detail_product_table": true,
-      "sidebar_company_statistics": true
+      "sidebar_company_statistics": true,
+      "studio_see_all_employees": true
     },
     "page_permissions": [
       "overview", 

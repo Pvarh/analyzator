@@ -228,6 +228,7 @@ class UserDatabase:
             "employee_detail_top_products": "Najpredávanejšie produkty z každej kategórie",
             "employee_detail_product_table": "Detailná tabuľka top produktov",
             "sidebar_company_statistics": "Celkové štatistiky firmy v sidebar-e",
+            "studio_see_all_employees": "Studio: Zobrazí všetkých zamestnancov (nie iba z vlastných miest)",
             # Tu môžeš pridať ďalšie funkcie
         }
     
