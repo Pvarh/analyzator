@@ -5,9 +5,22 @@ import plotly.graph_objects as go
 import time
 import hashlib
 import os
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
+from multiprocessing import cpu_count
 from core.studio_analyzer import StudioAnalyzer
 from auth.auth import has_feature_access, init_auth
+
+# 🚀 AUTO-DETECT CPU CORES pre maximálny výkon
+MAX_WORKERS = max(2, cpu_count())  # Minimálne 2, ale použije všetky dostupné cores
+
+def get_optimal_workers_count(data_size):
+    """Dynamické určenie optimálneho počtu workerov na základe veľkosti dát"""
+    if data_size < 1000:
+        return min(2, MAX_WORKERS)
+    elif data_size < 10000:
+        return min(4, MAX_WORKERS)
+    else:
+        return MAX_WORKERS  # Pre veľké datasety využij všetky cores
 
 @st.cache_data(ttl=300)  # 5 minút cache
 def get_employee_detailed_data_cached(employee_name, file_hash=None, filter_info=None):
@@ -59,6 +72,67 @@ def calculate_category_analysis_cached(emp_data_hash, emp_data_dict):
     
     category_sales.columns = ['Celkový predaj', 'Počet kusov', 'Priemerná cena']
     return category_sales.reset_index()
+
+@st.cache_data(ttl=300)
+def calculate_time_analysis_parallel(emp_data_hash, emp_data_dict):
+    """Paralelný výpočet časovej analýzy"""
+    emp_data = pd.DataFrame(emp_data_dict)
+    
+    if emp_data.empty or 'Datum real.' not in emp_data.columns:
+        return None
+    
+    try:
+        # Analýza podľa mesiacov
+        monthly_breakdown = emp_data.groupby(emp_data['Datum real.'].dt.month)['Cena/jedn.'].sum()
+        
+        # Analýza podľa dní v týždni
+        weekly_breakdown = emp_data.groupby(emp_data['Datum real.'].dt.dayofweek)['Cena/jedn.'].sum()
+        
+        # Trend analýza
+        daily_sales = emp_data.groupby(emp_data['Datum real.'].dt.date)['Cena/jedn.'].sum()
+        
+        return {
+            'monthly': monthly_breakdown,
+            'weekly': weekly_breakdown,
+            'daily_trend': daily_sales
+        }
+    except:
+        return None
+
+@st.cache_data(ttl=300)
+def calculate_product_analysis_parallel(emp_data_hash, emp_data_dict):
+    """Paralelný výpočet produktovej analýzy"""
+    emp_data = pd.DataFrame(emp_data_dict)
+    
+    if emp_data.empty:
+        return None
+    
+    try:
+        # Top produkty podľa predaja
+        if 'Název' in emp_data.columns:
+            top_products = emp_data.groupby('Název')['Cena/jedn.'].sum().sort_values(ascending=False).head(10)
+        else:
+            top_products = pd.Series()
+        
+        # Analýza podľa množstva
+        if 'Množství' in emp_data.columns:
+            quantity_analysis = emp_data.groupby('Název')['Množství'].sum().sort_values(ascending=False).head(10)
+        else:
+            quantity_analysis = pd.Series()
+        
+        # Priemerné ceny produktov
+        if 'Název' in emp_data.columns:
+            avg_prices = emp_data.groupby('Název')['Cena/jedn.'].mean().sort_values(ascending=False).head(10)
+        else:
+            avg_prices = pd.Series()
+        
+        return {
+            'top_products': top_products,
+            'quantity_analysis': quantity_analysis,
+            'avg_prices': avg_prices
+        }
+    except:
+        return None
 
 def get_data_hash(data):
     """Vytvorí hash pre pandas DataFrame alebo iné dáta"""
@@ -170,9 +244,14 @@ def render(selected_employee_name, analyzer_or_data):
     # Hash pre cache invalidation
     emp_data_hash = get_data_hash(emp_data)
     emp_data_dict = emp_data.to_dict('records')
+    data_size = len(emp_data)
+    optimal_workers = get_optimal_workers_count(data_size)
     
-    # Paralelné vykonávanie výpočtov
-    with ThreadPoolExecutor(max_workers=2) as executor:
+    # Zobrazenie performance info
+    st.caption(f"🔥 Employee Detail Performance: {optimal_workers}/{MAX_WORKERS} cores aktívnych")
+    
+    # Paralelné vykonávanie výpočtov - využívame všetky cores
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         # Spustenie cached výpočtov paralelne
         future_metrics = executor.submit(
             calculate_employee_metrics_cached, 
@@ -184,10 +263,31 @@ def render(selected_employee_name, analyzer_or_data):
             emp_data_hash,
             emp_data_dict
         )
+        # Pridáme ďalšie paralelné úlohy pre komplexnejšie spracovanie
+        future_time_analysis = executor.submit(
+            calculate_time_analysis_parallel,
+            emp_data_hash,
+            emp_data_dict
+        )
+        future_product_analysis = executor.submit(
+            calculate_product_analysis_parallel,
+            emp_data_hash,
+            emp_data_dict
+        )
         
-        # Čakanie na výsledky
-        metrics = future_metrics.result()
-        category_sales = future_categories.result()
+        # Čakanie na výsledky s timeoutom
+        try:
+            metrics = future_metrics.result(timeout=10)
+            category_sales = future_categories.result(timeout=10)
+            time_analysis = future_time_analysis.result(timeout=10)
+            product_analysis = future_product_analysis.result(timeout=10)
+        except Exception as e:
+            st.warning(f"⚠️ Timeout pri paralelnom spracovaní: {e}")
+            # Fallback na základné výpočty
+            metrics = calculate_employee_metrics_cached(emp_data_hash, emp_data_dict)
+            category_sales = calculate_category_analysis_cached(emp_data_hash, emp_data_dict)
+            time_analysis = None
+            product_analysis = None
     
     # ==================== ZÁKLADNÉ METRIKY ====================
     st.header("📊 Základné metriky")
