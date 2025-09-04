@@ -12,12 +12,12 @@ def render():
     
     # Kontrola admin oprávnení
     if not is_admin():
-        st.error("❌ Nemáte oprávnenie na túto stránku!")
+        st.error("❌ Nemáte oprávnenie na tútu stránku!")
         return
     
     user_db = UserDatabase()
     
-    # Sidebar pre navigáciu
+    # Minimálny sidebar - iba tlačidlo späť
     with st.sidebar:
         st.markdown("### 👥 User Management")
         
@@ -27,48 +27,8 @@ def render():
             st.session_state.user_mgmt_mode = "overview"
             st.session_state.selected_user_email = None
             st.rerun()
-        
-        st.divider()
-        
-        # Tlačidlo pre pridanie nového používateľa
-        if st.button("➕ Pridať nového používateľa", use_container_width=True, type="primary"):
-            st.session_state.user_mgmt_mode = "add_new"
-            st.session_state.selected_user_email = None
-            st.rerun()
-        
-        st.divider()
-        
-        # Zoznam používateľov
-        try:
-            all_users_data = user_db.load_users()
-            
-            if all_users_data:
-                st.markdown("**📋 Vyberte používateľa:**")
-                
-                for email, user_data in all_users_data.items():
-                    # Status indikátor
-                    status_icon = "✅" if user_data.get('active', True) else "❌"
-                    role_icon = "👑" if user_data.get('role') == 'admin' else "👤"
-                    
-                    # Tlačidlo pre každého používateľa
-                    button_text = f"{status_icon} {role_icon} {user_data.get('name', email)}"
-                    
-                    if st.button(
-                        button_text, 
-                        key=f"user_select_{email}",
-                        use_container_width=True,
-                        help=f"Email: {email}\nRola: {user_data.get('role', 'N/A')}"
-                    ):
-                        st.session_state.user_mgmt_mode = "edit_user"
-                        st.session_state.selected_user_email = email
-                        st.rerun()
-            else:
-                st.warning("⚠️ Žiadni používatelia v databáze")
-                
-        except Exception as e:
-            st.error(f"❌ Chyba pri načítaní používateľov: {e}")
     
-    # Hlavný obsah
+    # Hlavné rozhranie na stránke
     mode = st.session_state.get('user_mgmt_mode', 'overview')
     
     if mode == "add_new":
@@ -84,14 +44,22 @@ def render():
 
 
 def show_overview(user_db):
-    """Zobrazí prehľad všetkých používateľov"""
+    """Zobrazí prehľad všetkých používateľov s funkciami"""
     st.header("📊 Prehľad používateľov")
+    
+    # Tlačidlo pre pridanie nového používateľa
+    col1, col2 = st.columns([3, 1])
+    with col2:
+        if st.button("➕ Pridať nového používateľa", type="primary", use_container_width=True):
+            st.session_state.user_mgmt_mode = "add_new"
+            st.session_state.selected_user_email = None
+            st.rerun()
     
     try:
         all_users_data = user_db.load_users()
         
         if not all_users_data:
-            st.info("📝 **Zatiaľ žiadni používatelia.** Použite tlačidlo '➕ Pridať nového používateľa' v sidebar-e.")
+            st.info("📝 **Zatiaľ žiadni používatelia.** Použite tlačidlo '➕ Pridať nového používateľa' vyššie.")
             return
         
         # Štatistiky
@@ -111,25 +79,43 @@ def show_overview(user_db):
         
         st.divider()
         
-        # Tabuľka používateľov
-        st.subheader("📋 Zoznam používateľov")
+        # Interaktívny zoznam používateľov
+        st.subheader("📋 Kliknite na používateľa pre správu")
         
-        users_data = []
+        # Zobrazenie používateľov v klikateľných kartách
         for email, user_data in all_users_data.items():
-            users_data.append({
-                'Email': email,
-                'Meno': user_data.get('name', 'N/A'),
-                'Rola': user_data.get('role', 'N/A'),
-                'Mestá': ', '.join(user_data.get('cities', [])),
-                'Aktívny': "✅ Áno" if user_data.get('active', True) else "❌ Nie",
-                'Stránky': len(user_data.get('page_permissions', []))
-            })
-        
-        if users_data:
-            st.dataframe(users_data, use_container_width=True, hide_index=True)
-        
-        # Info panel
-        st.info("💡 **Tip:** Kliknite na používateľa v sidebar-e pre detailnú správu jeho nastavení.")
+            # Status indikátory
+            status_icon = "✅" if user_data.get('active', True) else "❌"
+            role_icon = "👑" if user_data.get('role') == 'admin' else "👤"
+            
+            # Karta pre každého používateľa
+            with st.container():
+                col1, col2, col3, col4 = st.columns([3, 2, 2, 1])
+                
+                with col1:
+                    st.markdown(f"**{status_icon} {role_icon} {user_data.get('name', email)}**")
+                    st.caption(f"📧 {email}")
+                
+                with col2:
+                    st.markdown(f"**Rola:** {user_data.get('role', 'N/A')}")
+                    st.caption(f"**Mestá:** {', '.join(user_data.get('cities', []))}")
+                
+                with col3:
+                    pages_count = len(user_data.get('page_permissions', []))
+                    features_count = len([f for f in user_data.get('features', {}).values() if f])
+                    st.markdown(f"**Stránky:** {pages_count}")
+                    st.caption(f"**Funkcie:** {features_count}")
+                
+                with col4:
+                    if st.button("✏️ Upraviť", 
+                                key=f"edit_{email}", 
+                                help=f"Upraviť používateľa {user_data.get('name', email)}",
+                                use_container_width=True):
+                        st.session_state.user_mgmt_mode = "edit_user"
+                        st.session_state.selected_user_email = email
+                        st.rerun()
+                
+                st.divider()
         
     except Exception as e:
         st.error(f"❌ Chyba pri zobrazení prehľadu: {e}")
@@ -137,6 +123,14 @@ def show_overview(user_db):
 
 def show_add_user_form(user_db):
     """Formulár pre pridanie nového používateľa"""
+    
+    # Tlačidlo späť na prehľad
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        if st.button("⬅️ Späť na prehľad", type="secondary"):
+            st.session_state.user_mgmt_mode = "overview"
+            st.rerun()
+    
     st.header("➕ Pridať nového používateľa")
     
     with st.form("add_user_form"):
@@ -214,6 +208,15 @@ def show_add_user_form(user_db):
 
 def show_user_detail(user_db, email):
     """Detailná správa konkrétneho používateľa"""
+    
+    # Tlačidlo späť na prehľad
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        if st.button("⬅️ Späť na prehľad", type="secondary"):
+            st.session_state.user_mgmt_mode = "overview"
+            st.session_state.selected_user_email = None
+            st.rerun()
+    
     try:
         all_users_data = user_db.load_users()
         user_data = all_users_data.get(email)
