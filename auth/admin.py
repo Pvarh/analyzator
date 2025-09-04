@@ -120,7 +120,7 @@ def get_directory_size(path):
 
 
 def show_admin_page():
-    """Zobrazí administrátorskú stránku"""
+    """Zobrazí administrátorskú stránku s tlačidlami pre rôzne sekcie"""
     user = get_current_user()
     if not user or user.get('role') != 'admin':
         st.error("❌ Nemáte oprávnenie na túto stránku")
@@ -128,51 +128,189 @@ def show_admin_page():
     
     st.title("👑 Admin Panel - Kompletný systém je úspešne nasadený!")
     
-    # Activity logs ako prvý tab
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
-        "📊 Aktivita logov",
-        "🖥️ Server Monitor",
-        "🐛 Error Logs",
-        "➕ Pridať používateľa", 
-        "📋 Zoznam používateľov", 
-        "🎛️ Správa funkcií",
-        "🔐 Oprávnenia stránok",
-        "🔑 Zmena hesla",
-        "📁 Správa dát"
-    ])
+    # Tlačidlá pre rôzne admin sekcie
+    st.markdown("### 🔧 Administračné nástroje")
     
-    user_db = st.session_state.user_db
+    col1, col2, col3, col4 = st.columns(4)
     
-    with tab1:
-        show_activity_logs()
+    with col1:
+        if st.button("👥 Správa používateľov", 
+                    use_container_width=True, 
+                    type="primary",
+                    help="Kompletná správa používateľov, oprávnení a funkcií"):
+            st.session_state.current_page = 'user_management'
+            st.rerun()
     
-    with tab2:
-        # Server monitoring môže mať vlastnú stránku
-        if st.session_state.get('show_monitoring_dashboard', False):
-            show_monitoring_dashboard()
-        else:
-            show_server_monitoring_tab()
+    with col2:
+        if st.button("🖥️ Server Monitor", 
+                    use_container_width=True, 
+                    type="secondary",
+                    help="Monitoring servera a výkonu"):
+            st.session_state.admin_section = 'server_monitor'
+            st.rerun()
     
-    with tab3:
-        show_error_logs()
+    with col3:
+        if st.button("📊 Aktivita logov", 
+                    use_container_width=True, 
+                    type="secondary",
+                    help="Prezeranie aktivity používateľov"):
+            st.session_state.admin_section = 'activity_logs'
+            st.rerun()
     
-    with tab4:
-        show_add_user_form(user_db)
+    with col4:
+        if st.button("🐛 Error Logs", 
+                    use_container_width=True, 
+                    type="secondary",
+                    help="Prezeranie chybových logov"):
+            st.session_state.admin_section = 'error_logs'
+            st.rerun()
     
-    with tab5:
-        show_users_list(user_db)
+    # Druhý rad tlačidiel
+    col5, col6, col7, col8 = st.columns(4)
     
-    with tab6:
-        show_feature_management(user_db)
+    with col5:
+        if st.button("📁 Správa dát", 
+                    use_container_width=True, 
+                    type="secondary",
+                    help="Správa súborov a dátových priečinkov"):
+            st.session_state.admin_section = 'data_management'
+            st.rerun()
     
-    with tab7:
-        show_page_permissions_management(user_db)
+    with col6:
+        if st.button("⚙️ Systémové nastavenia", 
+                    use_container_width=True, 
+                    type="secondary",
+                    help="Konfigurácia systému"):
+            st.session_state.admin_section = 'system_settings'
+            st.rerun()
     
-    with tab8:
-        show_admin_change_password(user_db)
+    with col7:
+        if st.button("📈 Performance", 
+                    use_container_width=True, 
+                    type="secondary",
+                    help="Analýza výkonu aplikácie"):
+            st.session_state.admin_section = 'performance'
+            st.rerun()
     
-    with tab9:
-        show_data_management()
+    with col8:
+        if st.button("🔄 Aktualizácie", 
+                    use_container_width=True, 
+                    type="secondary",
+                    help="Správa aktualizácií systému"):
+            st.session_state.admin_section = 'updates'
+            st.rerun()
+    
+    st.divider()
+    
+    # Zobrazenie vybranej sekcie
+    admin_section = st.session_state.get('admin_section', 'overview')
+    
+    if admin_section == 'server_monitor':
+        show_server_monitoring_section()
+    elif admin_section == 'activity_logs':
+        show_activity_logs_section()
+    elif admin_section == 'error_logs':
+        show_error_logs_section()
+    elif admin_section == 'data_management':
+        show_data_management_section()
+    elif admin_section == 'system_settings':
+        show_system_settings_section()
+    elif admin_section == 'performance':
+        show_performance_section()
+    elif admin_section == 'updates':
+        show_updates_section()
+    else:
+        show_admin_overview()
+
+
+def show_admin_overview():
+    """Zobrazí prehľad admin panelu"""
+    st.markdown("### 📊 Prehľad administrácie")
+    
+    # Základné info
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("🏠 Aktuálna stránka", "Admin Panel")
+    
+    with col2:
+        user_db = UserDatabase()
+        all_users = user_db.load_users()
+        st.metric("👥 Celkom používateľov", len(all_users))
+    
+    with col3:
+        active_users = sum(1 for user in all_users.values() if user.get('active', True))
+        st.metric("✅ Aktívnych", active_users)
+    
+    with col4:
+        admin_users = sum(1 for user in all_users.values() if user.get('role') == 'admin')
+        st.metric("👑 Adminov", admin_users)
+    
+    st.divider()
+    
+    # Quick info
+    st.info("💡 **Tip:** Použite tlačidlá vyššie pre prístup k rôznym administračným nástrojom. Pre kompletné používateľské funkcie kliknite na '👥 Správa používateľov'.")
+    
+    # Nedávne aktivity preview
+    st.markdown("### 📈 Rýchly prehľad")
+    
+    # Server status preview
+    try:
+        import psutil
+        cpu_percent = psutil.cpu_percent(interval=1)
+        memory = psutil.virtual_memory()
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("🖥️ CPU využitie", f"{cpu_percent:.1f}%")
+        with col2:
+            st.metric("💾 RAM využitie", f"{memory.percent:.1f}%")
+            
+    except Exception as e:
+        st.warning("⚠️ Nedá sa načítať systémové info")
+
+
+def show_server_monitoring_section():
+    """Sekcia pre server monitoring"""
+    st.markdown("### 🖥️ Server Monitor")
+    show_server_monitoring_tab()
+
+
+def show_activity_logs_section():
+    """Sekcia pre activity logs"""
+    st.markdown("### 📊 Aktivita logov")
+    show_activity_logs()
+
+
+def show_error_logs_section():
+    """Sekcia pre error logs"""
+    st.markdown("### 🐛 Error Logs")
+    show_error_logs()
+
+
+def show_data_management_section():
+    """Sekcia pre správu dát"""
+    st.markdown("### 📁 Správa dát")
+    show_data_management()
+
+
+def show_system_settings_section():
+    """Sekcia pre systémové nastavenia"""
+    st.markdown("### ⚙️ Systémové nastavenia")
+    st.info("🔧 Systémové nastavenia - bude implementované v budúcnosti")
+
+
+def show_performance_section():
+    """Sekcia pre performance"""
+    st.markdown("### 📈 Performance")
+    show_performance_monitoring()
+
+
+def show_updates_section():
+    """Sekcia pre aktualizácie"""
+    st.markdown("### 🔄 Aktualizácie")
+    st.info("🔄 Správa aktualizácií - bude implementované v budúcnosti")
+
 
 def show_error_logs():
     """Zobrazí error logy aplikácie"""

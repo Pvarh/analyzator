@@ -653,14 +653,6 @@ def create_sidebar():
                     st.session_state.selected_employee = None
                     st.rerun()
             
-            # ✅ User Management tlačidlo (iba pre adminov)
-            if is_admin():
-                if st.button("👥 Správa používateľov", width='stretch',
-                            type="primary" if current_page == 'user_management' else "secondary"):
-                    st.session_state.current_page = 'user_management'
-                    st.session_state.selected_employee = None
-                    st.rerun()
-            
             # ✅ Admin tlačidlo (iba pre adminov s oprávnením)
             if is_admin() and 'admin' in allowed_pages:
                 if st.button("👑 Administrácia", width='stretch',
