@@ -120,7 +120,8 @@ class UserDatabase:
             "role": role,
             "cities": cities,
             "name": name,
-            "active": True
+            "active": True,
+            "page_permissions": ["overview", "employee", "benchmark", "heatmap", "studio", "kpi_system"] if role == "manager" else ["overview", "employee", "benchmark", "heatmap", "studio", "kpi_system", "admin"]
         }
         
         return self.save_users()

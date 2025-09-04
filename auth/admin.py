@@ -2933,8 +2933,8 @@ def show_page_permissions_management(user_db):
                         user_data['page_permissions'] = new_permissions
                         all_users_data[selected_email] = user_data
                         
-                        # Ulož do databázy
-                        user_db.update_user(selected_email, user_data)
+                        # Ulož do databázy - používam **kwargs syntax
+                        user_db.update_user(selected_email, page_permissions=new_permissions)
                         
                         st.success(f"✅ **Oprávnenia uložené!**")
                         st.info(f"🔐 **Povolené stránky:** {', '.join([available_pages[p] for p in new_permissions])}")
