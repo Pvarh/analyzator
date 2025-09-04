@@ -539,7 +539,7 @@ def get_allowed_pages(user_email: str = None) -> list:
         
         # Admin má prístup ku všetkým stránkam
         if user_data.get('role') == 'admin':
-            return ['overview', 'employee', 'benchmark', 'heatmap', 'studio', 'kpi_system', 'admin']
+            return ['overview', 'employee', 'benchmark', 'heatmap', 'studio', 'kpi_system', 'admin', 'user_management']
         
         # Ak má definované page_permissions, použij ich
         if 'page_permissions' in user_data:

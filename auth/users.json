@@ -20,7 +20,8 @@
       "heatmap", 
       "studio",
       "kpi_system",
-      "admin"
+      "admin",
+      "user_management"
     ]
   },
   "jivanic@sykorahome.cz": {

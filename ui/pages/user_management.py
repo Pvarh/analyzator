@@ -21,6 +21,15 @@ def render():
     with st.sidebar:
         st.markdown("### 👥 User Management")
         
+        # Tlačidlo späť na admin panel
+        if st.button("⬅️ Späť na Admin Panel", use_container_width=True, type="secondary"):
+            st.session_state.current_page = 'admin'
+            st.session_state.user_mgmt_mode = "overview"
+            st.session_state.selected_user_email = None
+            st.rerun()
+        
+        st.divider()
+        
         # Tlačidlo pre pridanie nového používateľa
         if st.button("➕ Pridať nového používateľa", use_container_width=True, type="primary"):
             st.session_state.user_mgmt_mode = "add_new"

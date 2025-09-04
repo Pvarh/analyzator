@@ -176,29 +176,15 @@ def show_admin_page():
             st.session_state.admin_section = 'data_management'
             st.rerun()
     
+    # Prázdne miesta pre budúce rozšírenia
     with col6:
-        if st.button("⚙️ Systémové nastavenia", 
-                    use_container_width=True, 
-                    type="secondary",
-                    help="Konfigurácia systému"):
-            st.session_state.admin_section = 'system_settings'
-            st.rerun()
+        st.empty()
     
     with col7:
-        if st.button("📈 Performance", 
-                    use_container_width=True, 
-                    type="secondary",
-                    help="Analýza výkonu aplikácie"):
-            st.session_state.admin_section = 'performance'
-            st.rerun()
+        st.empty()
     
     with col8:
-        if st.button("🔄 Aktualizácie", 
-                    use_container_width=True, 
-                    type="secondary",
-                    help="Správa aktualizácií systému"):
-            st.session_state.admin_section = 'updates'
-            st.rerun()
+        st.empty()
     
     st.divider()
     
@@ -213,12 +199,6 @@ def show_admin_page():
         show_error_logs_section()
     elif admin_section == 'data_management':
         show_data_management_section()
-    elif admin_section == 'system_settings':
-        show_system_settings_section()
-    elif admin_section == 'performance':
-        show_performance_section()
-    elif admin_section == 'updates':
-        show_updates_section()
     else:
         show_admin_overview()
 
@@ -292,24 +272,6 @@ def show_data_management_section():
     """Sekcia pre správu dát"""
     st.markdown("### 📁 Správa dát")
     show_data_management()
-
-
-def show_system_settings_section():
-    """Sekcia pre systémové nastavenia"""
-    st.markdown("### ⚙️ Systémové nastavenia")
-    st.info("🔧 Systémové nastavenia - bude implementované v budúcnosti")
-
-
-def show_performance_section():
-    """Sekcia pre performance"""
-    st.markdown("### 📈 Performance")
-    show_performance_monitoring()
-
-
-def show_updates_section():
-    """Sekcia pre aktualizácie"""
-    st.markdown("### 🔄 Aktualizácie")
-    st.info("🔄 Správa aktualizácií - bude implementované v budúcnosti")
 
 
 def show_error_logs():
