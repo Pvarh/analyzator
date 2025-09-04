@@ -633,10 +633,12 @@ def get_filtered_employees(_analyzer, filter_type, appliance_filter, min_count=0
     # Pre administrátora alebo používateľov s "studio_see_all_employees" bez filtrovania
     if (current_user and current_user.get('role') == 'admin') or has_feature_access("studio_see_all_employees"):
         df_to_use = _analyzer.df_active
+        st.success(f"✅ **No filtering applied** - Total records: {len(df_to_use)}")
     else:
         # Filtrovanie podľa miest používateľa
         if not user_cities:
             # Ak používateľ nemá žiadne mestá, vráti prázdny DataFrame
+            st.error("❌ **No cities assigned** - Empty result")
             return pd.DataFrame()
         
         # Predpokladám že v dátach je stĺpec 'workplace' alebo podobný
@@ -644,10 +646,12 @@ def get_filtered_employees(_analyzer, filter_type, appliance_filter, min_count=0
         if 'workplace' in _analyzer.df_active.columns:
             city_filter = _analyzer.df_active['workplace'].str.lower().isin([c.lower() for c in user_cities])
             df_to_use = _analyzer.df_active[city_filter]
+            st.info(f"🏙️ **Filtered by workplace** - Records: {len(df_to_use)} (from {len(_analyzer.df_active)})")
         else:
             # Ak nie je stĺpec workplace, použije všetky dáta
             # (môže byť potrebné upraviť podľa skutočnej štruktúry)
             df_to_use = _analyzer.df_active
+            st.warning(f"⚠️ **No workplace column** - Using all data: {len(df_to_use)} records")
     
     # Základné štatistiky zamestnancov podľa kategorií spotrebičov
     if appliance_filter == "Všetky kategórie":

@@ -298,6 +298,10 @@ def get_user_cities() -> list:
     if not user:
         return []
     
+    # Ak je admin alebo má studio_see_all_employees, vráti všetky mestá
+    if (user.get('role') == 'admin') or has_feature_access("studio_see_all_employees"):
+        return ["praha", "brno", "zlin", "vizovice"]
+    
     cities = user.get('cities', [])
     if 'all' in cities:
         return ["praha", "brno", "zlin", "vizovice"]
