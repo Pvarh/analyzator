@@ -1,14 +1,6 @@
 #!/bin/bash
 #
-# Analyzaecho "🧹 Vymazávam cache súbory..."
-rm -rf data/cache/
-rm -rf .streamlit/
-find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-find . -name "*.pyc" -delete 2>/dev/null || true
-echo "✅ Všetky cache súbory vymazané"
-
-echo "🛑 Zastavujem Docker kontajner..."
-docker-compose downr Update Script
+# Analyzator Update Script
 # Tento skript aktualizuje aplikáciu z GitHub repozitára a reštartuje Docker kontajner
 #
 
@@ -29,7 +21,14 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-echo "� Zastavujem Docker kontajner..."
+echo "🧹 Vymazávam cache súbory..."
+rm -rf data/cache/
+rm -rf .streamlit/
+find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+find . -name "*.pyc" -delete 2>/dev/null || true
+echo "✅ Všetky cache súbory vymazané"
+
+echo "🛑 Zastavujem Docker kontajner..."
 docker-compose down
 
 echo "🚀 Spúšťam aktualizovaný Docker kontajner..."
