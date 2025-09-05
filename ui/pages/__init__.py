@@ -1,3 +1,3 @@
 # Page modules
 from . import overview, employee, heatmap, benchmark, studio
-from . import employee_detail
+from . import employee_detail, user_management, settings

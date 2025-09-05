@@ -9,7 +9,7 @@ from core.analyzer import DataAnalyzer
 from core.utils import format_money, format_profit_value
 
 # Import UI stránok
-from ui.pages import overview, employee, heatmap, benchmark, studio, employee_detail, user_management
+from ui.pages import overview, employee, heatmap, benchmark, studio, employee_detail, user_management, settings
 from ui.styling import apply_dark_theme
 
 # Import autentifikačného systému
@@ -579,36 +579,16 @@ def create_sidebar():
             # NORMÁLNE STRÁNKY SIDEBAR  
             st.markdown("# 📊 Navigation")
             
-            # Získaj povolené stránky pre aktuálneho používateľa
-            allowed_pages = get_allowed_pages()
-            
-            # ✅ NASTAVENIA DÁT
-            st.markdown("### ⚙️ Nastavenia dát")
-            
-            current_setting = st.session_state.get('include_terminated_employees', False)
-            
-            include_terminated = st.checkbox(
-                "🔄 Zahrnúť ukončených zamestnancov", 
-                value=current_setting,
-                help="Zahrnúť aj zamestnancov s 'X' v poslednom mesiaci"
-            )
-            
-            # Okamžitá zmena nastavenia
-            if include_terminated != current_setting:
-                st.session_state.include_terminated_employees = include_terminated
-                
-                # Vymaž analyzer pre reload
-                if 'analyzer' in st.session_state:
-                    del st.session_state.analyzer
-                
+            # NASTAVENIA - na vrchu
+            if st.button("⚙️ Nastavenia", width='stretch',
+                        type="primary" if current_page == 'settings' else "secondary"):
+                st.session_state.current_page = 'settings'
                 st.rerun()
             
-            # Info o počte zamestnancov
-            if st.session_state.get('analyzer'):
-                emp_count = len(st.session_state.analyzer.sales_employees)
-                st.info(f"📊 Aktuálne: {emp_count} zamestnancov")
-            
             st.divider()
+            
+            # Získaj povolené stránky pre aktuálneho používateľa
+            allowed_pages = get_allowed_pages()
             
             # NAVIGAČNÉ TLAČIDLÁ - iba povolené stránky
             if 'overview' in allowed_pages:
@@ -869,6 +849,10 @@ def run_main_application():
             log_page_activity('kpi_system')
             from ui.pages import kpi_system
             kpi_system.render()
+
+        elif st.session_state.current_page == 'settings':
+            log_page_activity('settings')
+            settings.show_settings()
 
         elif st.session_state.current_page == 'user_management':
             log_page_activity('user_management')

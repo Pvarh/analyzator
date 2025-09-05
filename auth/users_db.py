@@ -230,6 +230,7 @@ class UserDatabase:
             "employee_detail_product_table": "Detailná tabuľka top produktov",
             "sidebar_company_statistics": "Celkové štatistiky firmy v sidebar-e",
             "studio_see_all_employees": "Studio: Zobrazí všetkých zamestnancov (nie iba z vlastných miest)",
+            "settings_access": "Prístup k stránke nastavení",
             # Tu môžeš pridať ďalšie funkcie
         }
     

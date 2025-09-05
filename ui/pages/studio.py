@@ -199,8 +199,6 @@ def show_studio_page():
     # ⚡ INTELLIGENT SERVER-SIDE CACHING
     # Automaticky načíta cached dáta alebo vytvorí nové ak sa súbory zmenili
     
-    st.info("⚡ **Intelligent Cache:** Dáta sa načítajú z cache pre rýchlosť, automaticky sa aktualizujú pri zmene súborov")
-    
     try:
         # Použij nový server-side cache systém
         analyzer = create_analyzer_with_server_cache()
@@ -215,35 +213,19 @@ def show_studio_page():
     if analyzer.df_active.empty:
         st.warning("⚠️ Žiadne relevantné dáta po filtrovaní!")
         return
-    
-    # Cache info a aktuálne dáta info
-    folder_hash = get_studio_folder_hash()
-    with st.expander("ℹ️ Server Cache Informácie", expanded=False):
-        col1, col2 = st.columns(2)
-        with col1:
-            studio_file = load_studio_data_with_server_cache()
-            st.info(f"📁 **Aktuálny súbor:** {Path(studio_file).name if studio_file else 'N/A'}")
-            st.info(f"📊 **Počet záznamov:** {len(analyzer.df_active):,}")
-        with col2:
-            st.info(f"🔄 **Cache hash:** `{folder_hash}`")
-            st.success("✅ **Server Cache:** Aktívny - auto-invalidation pri zmene súborov")
-            
-        # Cache directory info
-        cache_files = list(CACHE_DIR.glob("*.pkl"))
-        st.info(f"💾 **Cache súbory:** {len(cache_files)} súborov v `{CACHE_DIR}`")
-            
-        # Info o zobrazovaných zamestnancoch
-        current_user = get_current_user()
-        if current_user and current_user.get('role') == 'admin':
-            st.success("👑 **Admin:** Zobrazujú sa všetci zamestnanci")
-        elif has_feature_access("studio_see_all_employees"):
-            st.success("🌍 **Všetci zamestnanci:** Máte povolenie vidieť všetkých")
+
+    # Info o zobrazovaných zamestnancoch
+    current_user = get_current_user()
+    if current_user and current_user.get('role') == 'admin':
+        st.success("👑 **Admin:** Zobrazujú sa všetci zamestnanci")
+    elif has_feature_access("studio_see_all_employees"):
+        st.success("🌍 **Všetci zamestnanci:** Máte povolenie vidieť všetkých")
+    else:
+        user_cities = get_user_cities()
+        if user_cities:
+            st.info(f"🏙️ **Filtrované mestá:** {', '.join(user_cities)}")
         else:
-            user_cities = get_user_cities()
-            if user_cities:
-                st.info(f"🏙️ **Filtrované mestá:** {', '.join(user_cities)}")
-            else:
-                st.warning("⚠️ **Žiadne prístupné mestá**")
+            st.warning("⚠️ **Žiadne prístupné mestá**")
     
     # ===== 🗓️ FILTER DÁTUMU =====
     st.subheader("📅 Filter dátumu")
@@ -673,9 +655,6 @@ def get_filtered_employees(_analyzer, filter_type, appliance_filter, min_count=0
             'Cena/jedn.': ['sum', 'count', 'mean'],
             'Datum real.': ['min', 'max']
         }).round(0)
-        
-        # DEBUG: Info o groupby výsledku
-        st.info(f"📊 **After groupby:** {len(employee_stats)} unique employees from {len(df_to_use)} records")
         
         employee_stats.columns = ['Celkový predaj', 'Počet objednávok', 'Priemerná hodnota', 'Prvá objednávka', 'Posledná objednávka']
         employee_stats = employee_stats.reset_index()
