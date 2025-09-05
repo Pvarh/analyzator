@@ -298,24 +298,14 @@ def get_user_cities() -> list:
     if not user:
         return []
     
-    # DEBUG: Dočasný debug pre identifikáciu problému
-    has_feature = has_feature_access("studio_see_all_employees")
-    is_admin = user.get('role') == 'admin'
-    user_cities_raw = user.get('cities', [])
-    
-    print(f"DEBUG get_user_cities: has_feature={has_feature}, is_admin={is_admin}, raw_cities={user_cities_raw}")
-    
     # Ak je admin alebo má studio_see_all_employees, vráti všetky mestá
-    if is_admin or has_feature:
-        result = ["praha", "brno", "zlin", "vizovice"]
-        print(f"DEBUG get_user_cities: returning all cities: {result}")
-        return result
+    if (user.get('role') == 'admin') or has_feature_access("studio_see_all_employees"):
+        return ["praha", "brno", "zlin", "vizovice"]
     
     cities = user.get('cities', [])
     if 'all' in cities:
         return ["praha", "brno", "zlin", "vizovice"]
     
-    print(f"DEBUG get_user_cities: returning user cities: {cities}")
     return cities
 
 def filter_data_by_user_access(df):

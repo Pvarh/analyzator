@@ -232,46 +232,8 @@ def show_studio_page():
         cache_files = list(CACHE_DIR.glob("*.pkl"))
         st.info(f"💾 **Cache súbory:** {len(cache_files)} súborov v `{CACHE_DIR}`")
             
-        # Debug info o zobrazovaných zamestnancoch
-        current_user = get_current_user()
-        
-        # EXTRA DEBUG - Skontroluj session vs fresh data
-        session_user = st.session_state.get('authenticated_user')
-        
-        st.markdown("### 🔍 Debug - User Access Info")
-        
-        with st.expander("🔧 EXTRA DEBUG - Session vs Fresh Data", expanded=False):
-            st.write("**Session user data:**", session_user)
-            st.write("**Fresh user data:**", current_user)
-            if 'user_db' in st.session_state:
-                fresh_from_db = st.session_state.user_db.users.get(current_user.get('email') if current_user else None)
-                st.write("**Direct from DB:**", fresh_from_db)
-            
-            # DEBUG get_user_cities
-            user_cities_result = get_user_cities()
-            has_feature = has_feature_access("studio_see_all_employees")
-            st.write("**🚨 get_user_cities() DEBUG:**")
-            st.write(f"- has_feature_access('studio_see_all_employees'): {has_feature}")
-            st.write(f"- user.get('role'): {current_user.get('role') if current_user else None}")
-            st.write(f"- user.get('cities'): {current_user.get('cities') if current_user else None}")
-            st.write(f"- get_user_cities() result: {user_cities_result}")
-            st.write(f"- len(user_cities_result): {len(user_cities_result)}")
-            st.write(f"- bool(user_cities_result): {bool(user_cities_result)}")
-        
-        col_debug1, col_debug2 = st.columns(2)
-        with col_debug1:
-            if current_user:
-                st.info(f"👤 **Používateľ:** {current_user.get('name', 'N/A')}")
-                st.info(f"📧 **Email:** {current_user.get('email', 'N/A')}")
-                st.info(f"🎭 **Rola:** {current_user.get('role', 'N/A')}")
-                st.info(f"🏙️ **Mestá:** {current_user.get('cities', [])}")
-        
-        with col_debug2:
-            st.info(f"🔧 **Features:** {current_user.get('features', {})}")
-            has_studio_feature = has_feature_access("studio_see_all_employees")
-            st.info(f"🌍 **studio_see_all_employees:** {has_studio_feature}")
-            
         # Info o zobrazovaných zamestnancoch
+        current_user = get_current_user()
         if current_user and current_user.get('role') == 'admin':
             st.success("👑 **Admin:** Zobrazujú sa všetci zamestnanci")
         elif has_feature_access("studio_see_all_employees"):
@@ -675,44 +637,21 @@ def show_employees_filter_section(analyzer):
     
     return filter_type, appliance_filter, min_count
 
-@st.cache_data(ttl=300)  # 5 minút cache - obnovená po fixe
+@st.cache_data(ttl=300)  # 5 minút cache
 def get_filtered_employees(_analyzer, filter_type, appliance_filter, min_count=0):
     """Vráti filtrovaných zamestnancov podľa kritérií + autentifikácie"""
     
-    # ✅ NOVÉ - Autentifikačné filtrovanie na začiatku
+    # Autentifikačné filtrovanie na začiatku
     user_cities = get_user_cities()
     current_user = get_current_user()
-    
-    # DEBUG: Info o filtrovaní
-    with st.expander("🔍 DEBUG - Employee Filtering", expanded=False):
-        st.write(f"**User cities:** {user_cities}")
-        st.write(f"**Current user role:** {current_user.get('role') if current_user else 'None'}")
-        st.write(f"**Has studio_see_all_employees:** {has_feature_access('studio_see_all_employees')}")
-        
-        # Zobraz dostupné stĺpce v dátach
-        st.write(f"**Available columns:** {list(_analyzer.df_active.columns)}")
-        
-        if 'workplace' in _analyzer.df_active.columns:
-            unique_workplaces = _analyzer.df_active['workplace'].unique()
-            st.write(f"**Unique workplaces:** {unique_workplaces}")
-        
-        # NOVÝ DEBUG - Kontaktné osoby
-        if 'Kontaktní osoba-Jméno a příjmení' in _analyzer.df_active.columns:
-            unique_contacts = _analyzer.df_active['Kontaktní osoba-Jméno a příjmení'].unique()
-            st.write(f"**Unique contacts in dataset:** {len(unique_contacts)} persons")
-            st.write(f"**First 10 contacts:** {unique_contacts[:10]}")
-        else:
-            st.write("**No contact column found!**")
     
     # Pre administrátora alebo používateľov s "studio_see_all_employees" bez filtrovania
     if (current_user and current_user.get('role') == 'admin') or has_feature_access("studio_see_all_employees"):
         df_to_use = _analyzer.df_active
-        st.success(f"✅ **No filtering applied** - Total records: {len(df_to_use)}")
     else:
         # Filtrovanie podľa miest používateľa
         if not user_cities:
             # Ak používateľ nemá žiadne mestá, vráti prázdny DataFrame
-            st.error("❌ **No cities assigned** - Empty result")
             return pd.DataFrame()
         
         # Predpokladám že v dátach je stĺpec 'workplace' alebo podobný
