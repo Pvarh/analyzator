@@ -319,9 +319,10 @@ def show_studio_page():
     # Role-based filtering pre studio dáta
     user = get_current_user()
     
-    if user and user.get('role') != 'admin':
-        # Manager - aplikuj city filtering
-        user_cities = user.get('cities', [])
+    # ✅ OPRAVENÉ - Kontrola oprávnení pred filtrovaním
+    if user and user.get('role') != 'admin' and not has_feature_access("studio_see_all_employees"):
+        # Manager bez studio_see_all_employees - aplikuj city filtering
+        user_cities = get_user_cities()  # Použiť správnu funkciu
         
         # Používame hlavný analyzer zo session_state (ak existuje)
         try:
@@ -347,6 +348,7 @@ def show_studio_page():
                 analyzer.df_active = analyzer.df_active.iloc[0:0].copy()  # Prázdny dataframe
         except Exception as e:
             st.error(f"❌ Chyba pri filtrovaní podľa miest: {e}")
+    # ✅ Admin alebo používateľ s studio_see_all_employees - žiadne filtrovanie
     
     # Filtrovanie dát podľa vybraného dátumu
     filtered_analyzer = apply_date_filter(analyzer, start_date, end_date)
