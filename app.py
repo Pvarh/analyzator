@@ -13,7 +13,7 @@ from ui.pages import overview, employee, heatmap, benchmark, studio, employee_de
 from ui.styling import apply_dark_theme
 
 # Import autentifikačného systému
-from auth.auth import init_auth, is_authenticated, show_login_page, show_user_info, is_admin, log_page_activity, can_show_sidebar_statistics, get_allowed_pages, can_access_page, get_default_page, can_access_detail_page, get_parent_page_for_detail
+from auth.auth import init_auth, is_authenticated, show_login_page, show_user_info, is_admin, log_page_activity, can_show_sidebar_statistics, get_allowed_pages, can_access_page, get_default_page, can_access_detail_page, get_parent_page_for_detail, has_feature_access
 from auth.admin import show_admin_page
 
 # Import server monitoring
@@ -577,13 +577,14 @@ def create_sidebar():
             
         else:
             # NORMÁLNE STRÁNKY SIDEBAR  
-            # NASTAVENIA - na vrchu
-            if st.button("⚙️ Nastavenia", width='stretch',
-                        type="primary" if current_page == 'settings' else "secondary"):
-                st.session_state.current_page = 'settings'
-                st.rerun()
-            
-            st.divider()
+            # NASTAVENIA - na vrchu (iba pre oprávnených používateľov)
+            if is_admin() or has_feature_access("settings_access"):
+                if st.button("⚙️ Nastavenia", width='stretch',
+                            type="primary" if current_page == 'settings' else "secondary"):
+                    st.session_state.current_page = 'settings'
+                    st.rerun()
+                
+                st.divider()
             
             # Získaj povolené stránky pre aktuálneho používateľa
             allowed_pages = get_allowed_pages()
