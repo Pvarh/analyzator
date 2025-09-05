@@ -439,15 +439,36 @@ def load_studio_data(folder_hash):
 # ZÁKLADNÉ ŠTATISTIKY
 # ---------------------------------------------------------------------------
 def show_basic_stats(analyzer):
-    """Zobrazí základné štatistiky"""
+    """Zobrazí základné štatistiky s rešpektovaním používateľských oprávnení"""
     
     st.subheader("📊 Základné štatistiky")
     
-    # Výpočet základných metrík
-    total_sales = analyzer.df_active['Cena/jedn.'].sum()
-    unique_employees = analyzer.df_active['Kontaktní osoba-Jméno a příjmení'].nunique()
-    total_orders = len(analyzer.df_active)
-    avg_order_value = analyzer.df_active['Cena/jedn.'].mean()
+    # ✅ OPRAVENÉ - Použiť filtrované dáta podľa oprávnení
+    user_cities = get_user_cities()
+    current_user = get_current_user()
+    
+    # Pre administrátora alebo používateľov s "studio_see_all_employees" bez filtrovania
+    if (current_user and current_user.get('role') == 'admin') or has_feature_access("studio_see_all_employees"):
+        df_to_use = analyzer.df_active
+    else:
+        # Filtrovanie podľa miest používateľa
+        if not user_cities:
+            df_to_use = pd.DataFrame()  # Prázdny DataFrame ak nemá mestá
+        elif 'workplace' in analyzer.df_active.columns:
+            city_filter = analyzer.df_active['workplace'].str.lower().isin([c.lower() for c in user_cities])
+            df_to_use = analyzer.df_active[city_filter]
+        else:
+            df_to_use = analyzer.df_active  # Fallback ak nie je workplace stĺpec
+    
+    if df_to_use.empty:
+        st.warning("⚠️ Žiadne dáta na zobrazenie podľa vašich oprávnení")
+        return
+    
+    # Výpočet základných metrík z filtrovaných dát
+    total_sales = df_to_use['Cena/jedn.'].sum()
+    unique_employees = df_to_use['Kontaktní osoba-Jméno a příjmení'].nunique()
+    total_orders = len(df_to_use)
+    avg_order_value = df_to_use['Cena/jedn.'].mean()
     
     # Zobrazenie v 4 stĺpcoch
     col1, col2, col3, col4 = st.columns(4)
@@ -468,16 +489,37 @@ def show_basic_stats(analyzer):
 # ŠTATISTICKÉ KARTY PRE KATEGÓRIE SPOTREBIČOV
 # ---------------------------------------------------------------------------
 def show_appliance_stats_cards(analyzer):
-    """Zobrazí štatistické karty pre každú kategóriu spotrebičov"""
+    """Zobrazí štatistické karty pre každú kategóriu spotrebičov s rešpektovaním používateľských oprávnení"""
     
     st.subheader("📈 Prehľad predaja podľa kategórií")
     
-    # Výpočet štatistík pre každú kategóriu
+    # ✅ OPRAVENÉ - Použiť filtrované dáta podľa oprávnení
+    user_cities = get_user_cities()
+    current_user = get_current_user()
+    
+    # Pre administrátora alebo používateľov s "studio_see_all_employees" bez filtrovania
+    if (current_user and current_user.get('role') == 'admin') or has_feature_access("studio_see_all_employees"):
+        df_to_use = analyzer.df_active
+    else:
+        # Filtrovanie podľa miest používateľa
+        if not user_cities:
+            df_to_use = pd.DataFrame()  # Prázdny DataFrame ak nemá mestá
+        elif 'workplace' in analyzer.df_active.columns:
+            city_filter = analyzer.df_active['workplace'].str.lower().isin([c.lower() for c in user_cities])
+            df_to_use = analyzer.df_active[city_filter]
+        else:
+            df_to_use = analyzer.df_active  # Fallback ak nie je workplace stĺpec
+    
+    if df_to_use.empty:
+        st.warning("⚠️ Žiadne dáta na zobrazenie podľa vašich oprávnení")
+        return
+    
+    # Výpočet štatistík pre každú kategóriu z filtrovaných dát
     appliance_stats = []
     
     for appliance in analyzer.APPLIANCES:
-        appliance_data = analyzer.df_active[
-            analyzer.df_active['Název_norm'] == appliance
+        appliance_data = df_to_use[
+            df_to_use['Název_norm'] == appliance
         ]
         
         if not appliance_data.empty:
