@@ -14,11 +14,12 @@ def show_settings():
         st.error("❌ Nie ste prihlásený")
         return
     
-    # Kontrola oprávnení
-    if not (is_admin() or has_feature_access("settings_access")):
-        st.error("❌ Nemáte oprávnenie pre prístup k nastaveniam")
-        st.info("💡 Kontaktujte administrátora pre povolenie prístupu k nastaveniam")
-        return
+    # Kontrola oprávnení - admin má automaticky prístup
+    if not is_admin():
+        if not has_feature_access("settings_access"):
+            st.error("❌ Nemáte oprávnenie pre prístup k nastaveniam")
+            st.info("💡 Kontaktujte administrátora pre povolenie prístupu k nastaveniam")
+            return
     
     # Header s info o používateľovi
     st.info(f"👤 **Používateľ:** {current_user.get('name', 'N/A')} ({current_user.get('email', 'N/A')})")

@@ -57,9 +57,6 @@ def render(analyzer):
     
     # Vyhľadávanie zamestnancov (pôvodné) - s filtrovanými dátami
     show_employee_search(filtered_summary, analyzer)
-    
-    # Prehľad podľa miest (pôvodné) - s filtrovanými dátami
-    show_cities_detailed_overview(analyzer)
 
 def create_city_overview(summary_data):
     """Vytvorí prehľad podľa miest"""
@@ -1206,73 +1203,3 @@ def find_original_overall_score(employee_name, analyzer):
     
     # Fallback
     return 50
-
-def show_cities_detailed_overview(analyzer):
-    """Detailný prehľad podľa miest - iba pre povolené mestá"""
-    from auth.auth import get_current_user, can_access_city
-    
-    create_section_header("Detailný prehľad podľa miest", "🏢")
-    
-    current_user = get_current_user()
-    if not current_user:
-        st.error("❌ Nie ste prihlásený")
-        return
-    
-    # Zoznam všetkých miest
-    all_cities = ['praha', 'brno', 'zlin', 'vizovice']
-    
-    # Filtrovanie miest podľa oprávnení používateľa
-    if current_user.get('role') == 'admin':
-        allowed_cities = all_cities  # Admin vidí všetko
-    else:
-        user_cities = current_user.get('cities', [])
-        allowed_cities = [city for city in all_cities if can_access_city(city)]
-    
-    if not allowed_cities:
-        st.warning("⚠️ Nemáte oprávnenie na zobrazenie žiadnych miest")
-        return
-    
-    # Implementácia detailného prehľadu iba pre povolené mestá
-    cities_data = {}
-    
-    for workplace in allowed_cities:
-        city_employees = analyzer.get_employees_by_workplace(workplace)
-        if city_employees:
-            total_sales = sum([emp.get('total_sales', 0) for emp in city_employees])
-            cities_data[workplace] = {
-                'employees': city_employees,
-                'count': len(city_employees),
-                'total_sales': total_sales
-            }
-    
-    if not cities_data:
-        st.info("ℹ️ Žiadne dáta pre vaše oprávnené mestá")
-        return
-    
-    for workplace, data in cities_data.items():
-        with st.expander(f"🏢 {workplace.upper()} ({data['count']} zaměstnanců)", expanded=False):
-            
-            # Metriky mesta
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("Zaměstnanci", data['count'])
-            with col2:
-                st.metric("Celkový predaj", format_money(data['total_sales']))
-            with col3:
-                avg_per_emp = data['total_sales'] / data['count'] if data['count'] > 0 else 0
-                st.metric("Průměr na zaměstnance", format_money(avg_per_emp))
-            
-            # Zoznam zamestnancov - konvertovať na summary formát
-            summary_employees = []
-            for emp in data['employees']:
-                summary_emp = {
-                    'name': emp.get('name', 'Unknown'),
-                    'workplace': emp.get('workplace', 'unknown'),
-                    'monthly_sales': emp.get('monthly_sales', {}),
-                    'total_sales': emp.get('total_sales', 0),
-                    'score': emp.get('score', 0),
-                    'rating': 'average'  # Môžete doplniť výpočet
-                }
-                summary_employees.append(summary_emp)
-            
-            show_employee_cards(summary_employees, analyzer, prefix=f"city_{workplace}")

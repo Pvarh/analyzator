@@ -577,8 +577,6 @@ def create_sidebar():
             
         else:
             # NORMÁLNE STRÁNKY SIDEBAR  
-            st.markdown("# 📊 Navigation")
-            
             # NASTAVENIA - na vrchu
             if st.button("⚙️ Nastavenia", width='stretch',
                         type="primary" if current_page == 'settings' else "secondary"):
