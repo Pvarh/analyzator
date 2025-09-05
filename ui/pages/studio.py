@@ -246,6 +246,17 @@ def show_studio_page():
             if 'user_db' in st.session_state:
                 fresh_from_db = st.session_state.user_db.users.get(current_user.get('email') if current_user else None)
                 st.write("**Direct from DB:**", fresh_from_db)
+            
+            # DEBUG get_user_cities
+            user_cities_result = get_user_cities()
+            has_feature = has_feature_access("studio_see_all_employees")
+            st.write("**🚨 get_user_cities() DEBUG:**")
+            st.write(f"- has_feature_access('studio_see_all_employees'): {has_feature}")
+            st.write(f"- user.get('role'): {current_user.get('role') if current_user else None}")
+            st.write(f"- user.get('cities'): {current_user.get('cities') if current_user else None}")
+            st.write(f"- get_user_cities() result: {user_cities_result}")
+            st.write(f"- len(user_cities_result): {len(user_cities_result)}")
+            st.write(f"- bool(user_cities_result): {bool(user_cities_result)}")
         
         col_debug1, col_debug2 = st.columns(2)
         with col_debug1:
